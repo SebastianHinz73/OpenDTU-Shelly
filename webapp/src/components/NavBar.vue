@@ -28,39 +28,53 @@
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarScrollingDropdown">
                             <li>
-                                <router-link @click="onClick" class="dropdown-item" to="/settings/network">{{ $t('menu.NetworkSettings') }}</router-link>
+                                <router-link @click="onClick" class="dropdown-item" to="/settings/network">{{
+                                    $t('menu.NetworkSettings') }}</router-link>
                             </li>
                             <li>
-                                <router-link @click="onClick" class="dropdown-item" to="/settings/ntp">{{ $t('menu.NTPSettings') }}</router-link>
+                                <router-link @click="onClick" class="dropdown-item" to="/settings/ntp">{{
+                                    $t('menu.NTPSettings') }}</router-link>
                             </li>
                             <li>
-                                <router-link @click="onClick" class="dropdown-item" to="/settings/mqtt">{{ $t('menu.MQTTSettings') }}</router-link>
+                                <router-link @click="onClick" class="dropdown-item" to="/settings/mqtt">{{
+                                    $t('menu.MQTTSettings') }}</router-link>
                             </li>
                             <li>
-                                <router-link @click="onClick" class="dropdown-item" to="/settings/inverter">{{ $t('menu.InverterSettings') }}
+                                <router-link @click="onClick" class="dropdown-item" to="/settings/inverter">{{
+                                    $t('menu.InverterSettings') }}
                                 </router-link>
                             </li>
                             <li>
-                                <router-link @click="onClick" class="dropdown-item" to="/settings/security">{{ $t('menu.SecuritySettings') }}
+                                <router-link @click="onClick" class="dropdown-item" to="/settings/shelly">{{
+                                    $t('menu.ShellySettings') }}</router-link>
+                            </li>
+                            <li>
+                                <router-link @click="onClick" class="dropdown-item" to="/settings/security">{{
+                                    $t('menu.SecuritySettings') }}
                                 </router-link>
                             </li>
                             <li>
-                                <router-link @click="onClick" class="dropdown-item" to="/settings/dtu">{{ $t('menu.DTUSettings') }}</router-link>
+                                <router-link @click="onClick" class="dropdown-item" to="/settings/dtu">{{
+                                    $t('menu.DTUSettings') }}</router-link>
                             </li>
                             <li>
-                                <router-link @click="onClick" class="dropdown-item" to="/settings/device">{{ $t('menu.DeviceManager') }}</router-link>
+                                <router-link @click="onClick" class="dropdown-item" to="/settings/device">{{
+                                    $t('menu.DeviceManager') }}</router-link>
                             </li>
                             <li>
                                 <hr class="dropdown-divider" />
                             </li>
                             <li>
-                                <router-link @click="onClick" class="dropdown-item" to="/settings/config">{{ $t('menu.ConfigManagement') }}</router-link>
+                                <router-link @click="onClick" class="dropdown-item" to="/settings/config">{{
+                                    $t('menu.ConfigManagement') }}</router-link>
                             </li>
                             <li>
-                                <router-link @click="onClick" class="dropdown-item" to="/firmware/upgrade">{{ $t('menu.FirmwareUpgrade') }}</router-link>
+                                <router-link @click="onClick" class="dropdown-item" to="/firmware/upgrade">{{
+                                    $t('menu.FirmwareUpgrade') }}</router-link>
                             </li>
                             <li>
-                                <router-link @click="onClick" class="dropdown-item" to="/maintenance/reboot">{{ $t('menu.DeviceReboot') }}</router-link>
+                                <router-link @click="onClick" class="dropdown-item" to="/maintenance/reboot">{{
+                                    $t('menu.DeviceReboot') }}</router-link>
                             </li>
                         </ul>
                     </li>
@@ -71,22 +85,27 @@
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarScrollingDropdown">
                             <li>
-                                <router-link @click="onClick" class="dropdown-item" to="/info/system">{{ $t('menu.System') }}</router-link>
+                                <router-link @click="onClick" class="dropdown-item" to="/info/system">{{ $t('menu.System')
+                                }}</router-link>
                             </li>
                             <li>
-                                <router-link @click="onClick" class="dropdown-item" to="/info/network">{{ $t('menu.Network') }}</router-link>
+                                <router-link @click="onClick" class="dropdown-item" to="/info/network">{{ $t('menu.Network')
+                                }}</router-link>
                             </li>
                             <li>
-                                <router-link @click="onClick" class="dropdown-item" to="/info/ntp">{{ $t('menu.NTP') }}</router-link>
+                                <router-link @click="onClick" class="dropdown-item" to="/info/ntp">{{ $t('menu.NTP')
+                                }}</router-link>
                             </li>
                             <li>
-                                <router-link @click="onClick" class="dropdown-item" to="/info/mqtt">{{ $t('menu.MQTT') }}</router-link>
+                                <router-link @click="onClick" class="dropdown-item" to="/info/mqtt">{{ $t('menu.MQTT')
+                                }}</router-link>
                             </li>
                             <li>
                                 <hr class="dropdown-divider" />
                             </li>
                             <li>
-                                <router-link @click="onClick" class="dropdown-item" to="/info/console">{{ $t('menu.Console') }}</router-link>
+                                <router-link @click="onClick" class="dropdown-item" to="/info/console">{{ $t('menu.Console')
+                                }}</router-link>
                             </li>
                         </ul>
                     </li>
@@ -97,8 +116,10 @@
                     <ThemeSwitcher class="me-2" />
                     <form class="d-flex" role="search">
                         <LocaleSwitcher class="me-2" />
-                        <button v-if="isLogged" class="btn btn-outline-danger" @click="signout">{{ $t('menu.Logout') }}</button>
-                        <button v-if="!isLogged" class="btn btn-outline-success" @click="signin">{{ $t('menu.Login') }}</button>
+                        <button v-if="isLogged" class="btn btn-outline-danger" @click="signout">{{ $t('menu.Logout')
+                        }}</button>
+                        <button v-if="!isLogged" class="btn btn-outline-success" @click="signin">{{ $t('menu.Login')
+                        }}</button>
                     </form>
                 </ul>
             </div>

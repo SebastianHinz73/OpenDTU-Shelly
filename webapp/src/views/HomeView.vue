@@ -2,6 +2,7 @@
     <BasePage :title="$t('home.LiveData')" :isLoading="dataLoading" :isWideScreen="true" :showWebSocket="true" :isWebsocketConnected="isWebsocketConnected" @reload="reloadData">
         <HintView :hints="liveData.hints" />
         <InverterTotalInfo :totalData="liveData.total" /><br />
+        <ShellyInfo :shellyData="liveData.shelly" /><br />
         <div class="row gy-3">
             <div class="col-sm-3 col-md-2" :style="[inverterData.length == 1 ? { 'display': 'none' } : {}]">
                 <div class="nav nav-pills row-cols-sm-1" id="v-pills-tab" role="tablist" aria-orientation="vertical">
@@ -259,6 +260,7 @@ import DevInfo from '@/components/DevInfo.vue';
 import EventLog from '@/components/EventLog.vue';
 import GridProfile from '@/components/GridProfile.vue';
 import HintView from '@/components/HintView.vue';
+import ShellyInfo from '@/components/ShellyInfo.vue';
 import InverterChannelInfo from "@/components/InverterChannelInfo.vue";
 import InverterTotalInfo from '@/components/InverterTotalInfo.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
@@ -294,6 +296,7 @@ export default defineComponent({
         EventLog,
         GridProfile,
         HintView,
+        ShellyInfo,
         InverterChannelInfo,
         InverterTotalInfo,
         ModalDialog,

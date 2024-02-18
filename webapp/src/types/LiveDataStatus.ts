@@ -49,8 +49,16 @@ export interface Hints {
     radio_problem: boolean;
 }
 
+export interface Shelly {
+    pro3em_value: number;
+    pro3em_valid: boolean;
+    plugs_value: number;
+    plugs_valid: boolean;
+}
+
 export interface LiveData {
     inverters: Inverter[];
     total: Total;
     hints: Hints;
+    shelly: Shelly;
 }

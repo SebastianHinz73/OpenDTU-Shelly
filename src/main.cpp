@@ -16,6 +16,7 @@
 #include "NetworkSettings.h"
 #include "NtpSettings.h"
 #include "PinMapping.h"
+#include "ShellyClient.h"
 #include "Scheduler.h"
 #include "SunPosition.h"
 #include "Utils.h"
@@ -149,6 +150,7 @@ void setup()
         config.Dtu.Serial = dtuId;
         Configuration.write();
     }
+	ShellyClient.init(scheduler);
     MessageOutput.println("done");
 
     InverterSettings.init(scheduler);

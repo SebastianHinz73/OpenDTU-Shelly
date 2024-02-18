@@ -3,6 +3,7 @@ import ConfigAdminView from '@/views/ConfigAdminView.vue';
 import ConsoleInfoView from '@/views/ConsoleInfoView.vue';
 import DeviceAdminView from '@/views/DeviceAdminView.vue'
 import DtuAdminView from '@/views/DtuAdminView.vue';
+import ShellyAdminView from '@/views/ShellyAdminView.vue';
 import FirmwareUpgradeView from '@/views/FirmwareUpgradeView.vue';
 import HomeView from '@/views/HomeView.vue';
 import InverterAdminView from '@/views/InverterAdminView.vue';
@@ -88,6 +89,11 @@ const router = createRouter({
         component: DtuAdminView
     },
     {
+            path: '/settings/shelly',
+            name: 'Shelly Settings',
+            component: ShellyAdminView
+        },
+        {
         path: '/settings/device',
         name: 'Device Manager',
         component: DeviceAdminView

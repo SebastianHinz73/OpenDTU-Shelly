@@ -97,6 +97,13 @@ bool ConfigurationClass::write()
     dtu["cmt_frequency"] = config.Dtu.Cmt.Frequency;
     dtu["cmt_country_mode"] = config.Dtu.Cmt.CountryMode;
 
+    JsonObject shelly = doc.createNestedObject("shelly");
+    shelly["shelly_hostname_pro3em"] = config.Shelly.Hostname_Pro3EM;
+    shelly["shelly_hostname_plugs"] = config.Shelly.Hostname_PlugS;
+    shelly["poll_interval"] = config.Shelly.PollInterval;
+    shelly["max_power"] = config.Shelly.MaxPower;
+    shelly["limit_power"] = config.Shelly.LimitPower;
+
     JsonObject security = doc.createNestedObject("security");
     security["password"] = config.Security.Password;
     security["allow_readonly"] = config.Security.AllowReadonly;
@@ -265,6 +272,13 @@ bool ConfigurationClass::read()
     config.Dtu.Cmt.PaLevel = dtu["cmt_pa_level"] | DTU_CMT_PA_LEVEL;
     config.Dtu.Cmt.Frequency = dtu["cmt_frequency"] | DTU_CMT_FREQUENCY;
     config.Dtu.Cmt.CountryMode = dtu["cmt_country_mode"] | DTU_CMT_COUNTRY_MODE;
+
+    JsonObject shelly = doc["shelly"];
+    strlcpy(config.Shelly.Hostname_Pro3EM, shelly["shelly_hostname_pro3em"] | SHELLY_HOST, sizeof(config.Shelly.Hostname_Pro3EM));
+    strlcpy(config.Shelly.Hostname_PlugS, shelly["shelly_hostname_plugs"] | SHELLY_HOST, sizeof(config.Shelly.Hostname_PlugS));
+    config.Shelly.PollInterval = shelly["poll_interval"] | SHELLY_POLL_INTERVAL;
+    config.Shelly.MaxPower = shelly["max_power"] | SHELLY_MAX_POWER;
+    config.Shelly.LimitPower = shelly["limit_power"] | SHELLY_LIMIT_POWER;
 
     JsonObject security = doc["security"];
     strlcpy(config.Security.Password, security["password"] | ACCESS_POINT_PASSWORD, sizeof(config.Security.Password));
