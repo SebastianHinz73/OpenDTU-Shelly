@@ -1,8 +1,8 @@
 <template>
-    <BasePage :title="$t('home.LiveData')" :isLoading="dataLoading" :isWideScreen="true" :showWebSocket="true" :isWebsocketConnected="isWebsocketConnected" @reload="reloadData">
+    <BasePage :title="$t('home.LiveData')" :isLoading="dataLoading" :isWideScreen="true" :showWebSocket="true"
+        :isWebsocketConnected="isWebsocketConnected" @reload="reloadData">
         <HintView :hints="liveData.hints" />
         <InverterTotalInfo :totalData="liveData.total" /><br />
-        <ShellyInfo :shellyData="liveData.shelly" /><br />
         <div class="row gy-3">
             <div class="col-sm-3 col-md-2" :style="[inverterData.length == 1 ? { 'display': 'none' } : {}]">
                 <div class="nav nav-pills row-cols-sm-1" id="v-pills-tab" role="tablist" aria-orientation="vertical">
@@ -18,6 +18,7 @@
                 </div>
             </div>
 
+
             <div class="tab-content" id="v-pills-tabContent" :class="{
                 'col-sm-9 col-md-10': inverterData.length > 1,
                 'col-sm-12 col-md-12': inverterData.length == 1
@@ -26,13 +27,12 @@
                     :id="'v-pills-' + inverter.serial" role="tabpanel"
                     :aria-labelledby="'v-pills-' + inverter.serial + '-tab'" tabindex="0">
                     <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center"
-                            :class="{
-                                'text-bg-tertiary': !inverter.poll_enabled,
-                                'text-bg-danger': inverter.poll_enabled && !inverter.reachable,
-                                'text-bg-warning': inverter.poll_enabled && inverter.reachable && !inverter.producing,
-                                'text-bg-primary': inverter.poll_enabled && inverter.reachable && inverter.producing,
-                            }">
+                        <div class="card-header d-flex justify-content-between align-items-center" :class="{
+                            'text-bg-tertiary': !inverter.poll_enabled,
+                            'text-bg-danger': inverter.poll_enabled && !inverter.reachable,
+                            'text-bg-warning': inverter.poll_enabled && inverter.reachable && !inverter.producing,
+                            'text-bg-primary': inverter.poll_enabled && inverter.reachable && inverter.producing,
+                        }">
                             <div class="p-1 flex-grow-1">
                                 <div class="d-flex flex-wrap">
                                     <div style="padding-right: 2em;">
@@ -41,13 +41,26 @@
                                     <div style="padding-right: 2em;">
                                         {{ $t('home.SerialNumber') }}{{ inverter.serial }}
                                     </div>
-                                    <div style="padding-right: 2em;">
+                                    <div style="padding-right: 2em;" v-if="!liveData.shelly.limit_enabled">
                                         {{ $t('home.CurrentLimit') }}<template v-if="inverter.limit_absolute > -1"> {{
-                                                $n(inverter.limit_absolute, 'decimalNoDigits')
+                                            $n(inverter.limit_absolute, 'decimalNoDigits')
                                         }} W | </template>{{ $n(inverter.limit_relative / 100, 'percent') }}
                                     </div>
+
+                                    <div style="padding-right: 2em;" v-if="liveData.shelly.limit_enabled">
+                                        {{ $t('home.CurrentLimit') }}<template v-if="inverter.limit_absolute > -1"> {{
+                                            liveData.shelly.limit_value.toFixed(1)
+                                        }} W</template>
+                                    </div>
+                                    <div style="padding-right: 2em;" v-if="liveData.shelly.pro3em_enabled">
+                                        ShellyPro3EM: {{ liveData.shelly.pro3em_value.toFixed(1) }}
+                                    </div>
+                                    <div style="padding-right: 2em;" v-if="liveData.shelly.plugs_enabled">
+                                        ShellyPlugS: {{ liveData.shelly.plugs_value.toFixed(1) }}
+                                    </div>
+
                                     <div style="padding-right: 2em;">
-                                        {{ $t('home.DataAge') }} {{ $t('home.Seconds', {'val': $n(inverter.data_age) }) }}
+                                        {{ $t('home.DataAge') }} {{ $t('home.Seconds', { 'val': $n(inverter.data_age) }) }}
                                         <template v-if="inverter.data_age > 300">
                                             / {{ calculateAbsoluteTime(inverter.data_age) }}
                                         </template>
@@ -57,7 +70,8 @@
                             <div class="btn-toolbar p-2" role="toolbar">
                                 <div class="btn-group me-2" role="group">
                                     <button :disabled="!isLogged" type="button" class="btn btn-sm btn-danger"
-                                        @click="onShowLimitSettings(inverter.serial)" v-tooltip :title="$t('home.ShowSetInverterLimit')">
+                                        @click="onShowLimitSettings(inverter.serial)" v-tooltip
+                                        :title="$t('home.ShowSetInverterLimit')">
                                         <BIconSpeedometer style="font-size:24px;" />
 
                                     </button>
@@ -65,7 +79,8 @@
 
                                 <div class="btn-group me-2" role="group">
                                     <button :disabled="!isLogged" type="button" class="btn btn-sm btn-danger"
-                                        @click="onShowPowerSettings(inverter.serial)" v-tooltip :title="$t('home.TurnOnOff')">
+                                        @click="onShowPowerSettings(inverter.serial)" v-tooltip
+                                        :title="$t('home.TurnOnOff')">
                                         <BIconPower style="font-size:24px;" />
 
                                     </button>
@@ -73,7 +88,8 @@
 
                                 <div class="btn-group me-2" role="group">
                                     <button type="button" class="btn btn-sm btn-info"
-                                        @click="onShowDevInfo(inverter.serial)" v-tooltip :title="$t('home.ShowInverterInfo')">
+                                        @click="onShowDevInfo(inverter.serial)" v-tooltip
+                                        :title="$t('home.ShowInverterInfo')">
                                         <BIconCpu style="font-size:24px;" />
 
                                     </button>
@@ -81,7 +97,8 @@
 
                                 <div class="btn-group me-2" role="group">
                                     <button type="button" class="btn btn-sm btn-info"
-                                        @click="onShowGridProfile(inverter.serial)" v-tooltip :title="$t('home.ShowGridProfile')">
+                                        @click="onShowGridProfile(inverter.serial)" v-tooltip
+                                        :title="$t('home.ShowGridProfile')">
                                         <BIconOutlet style="font-size:24px;" />
 
                                     </button>
@@ -103,17 +120,18 @@
                         </div>
                         <div class="card-body">
                             <div class="row flex-row-reverse flex-wrap-reverse g-3">
-                                <template v-for="chanType in [{obj: inverter.INV, name: 'INV'}, {obj: inverter.AC, name: 'AC'}, {obj: inverter.DC, name: 'DC'}].reverse()">
+                                <template
+                                    v-for="chanType in [{ obj: inverter.INV, name: 'INV' }, { obj: inverter.AC, name: 'AC' }, { obj: inverter.DC, name: 'DC' }].reverse()">
                                     <template v-if="chanType.obj != null">
-                                        <template v-for="channel in Object.keys(chanType.obj).sort().reverse().map(x=>+x)" :key="channel">
+                                        <template v-for="channel in Object.keys(chanType.obj).sort().reverse().map(x => +x)"
+                                            :key="channel">
                                             <template v-if="(chanType.name != 'DC') ||
                                                 (chanType.name == 'DC' && getSumIrridiation(inverter) == 0) ||
                                                 (chanType.name == 'DC' && getSumIrridiation(inverter) > 0 && chanType.obj[channel].Irradiation?.max || 0 > 0)
                                                 ">
                                                 <div class="col">
                                                     <InverterChannelInfo :channelData="chanType.obj[channel]"
-                                                        :channelType="chanType.name"
-                                                        :channelNumber="channel" />
+                                                        :channelType="chanType.name" :channelNumber="channel" />
                                                 </div>
                                             </template>
                                         </template>
@@ -260,7 +278,6 @@ import DevInfo from '@/components/DevInfo.vue';
 import EventLog from '@/components/EventLog.vue';
 import GridProfile from '@/components/GridProfile.vue';
 import HintView from '@/components/HintView.vue';
-import ShellyInfo from '@/components/ShellyInfo.vue';
 import InverterChannelInfo from "@/components/InverterChannelInfo.vue";
 import InverterTotalInfo from '@/components/InverterTotalInfo.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
@@ -296,7 +313,6 @@ export default defineComponent({
         EventLog,
         GridProfile,
         HintView,
-        ShellyInfo,
         InverterChannelInfo,
         InverterTotalInfo,
         ModalDialog,
@@ -456,6 +472,7 @@ export default defineComponent({
                 if (event.data != "{}") {
                     const newData = JSON.parse(event.data);
                     Object.assign(this.liveData.total, newData.total);
+                    Object.assign(this.liveData.shelly, newData.shelly);
                     Object.assign(this.liveData.hints, newData.hints);
 
                     const foundIdx = this.liveData.inverters.findIndex((element) => element.serial == newData.inverters[0].serial);

@@ -12,7 +12,4 @@ public:
 private:
     void onShellyAdminGet(AsyncWebServerRequest* request);
     void onShellyAdminPost(AsyncWebServerRequest* request);
-
-    Task _applyDataTask;
-    void applyDataTaskCb();
 };

@@ -11,7 +11,6 @@
 #include <Hoymiles.h>
 
 WebApiShellyClass::WebApiShellyClass()
-    : _applyDataTask(TASK_IMMEDIATE, TASK_ONCE, std::bind(&WebApiShellyClass::applyDataTaskCb, this))
 {
 }
 
@@ -21,22 +20,6 @@ void WebApiShellyClass::init(AsyncWebServer& server, Scheduler& scheduler)
 
     server.on("/api/shelly/config", HTTP_GET, std::bind(&WebApiShellyClass::onShellyAdminGet, this, _1));
     server.on("/api/shelly/config", HTTP_POST, std::bind(&WebApiShellyClass::onShellyAdminPost, this, _1));
-
-    scheduler.addTask(_applyDataTask);
-}
-
-void WebApiShellyClass::applyDataTaskCb()
-{
-    // Execute stuff in main thread to avoid busy SPI bus
-    /* CONFIG_T& config = Configuration.get();
-     Hoymiles.getRadioNrf()->setPALevel((rf24_pa_dbm_e)config.Dtu.Nrf.PaLevel);
-     Hoymiles.getRadioCmt()->setPALevel(config.Dtu.Cmt.PaLevel);
-     Hoymiles.getRadioNrf()->setDtuSerial(config.Dtu.Serial);
-     Hoymiles.getRadioCmt()->setDtuSerial(config.Dtu.Serial);
-     Hoymiles.getRadioCmt()->setCountryMode(static_cast<CountryModeId_t>(config.Dtu.Cmt.CountryMode));
-     Hoymiles.getRadioCmt()->setInverterTargetFrequency(config.Dtu.Cmt.Frequency);
-     Hoymiles.setPollInterval(config.Dtu.PollInterval);
- */
 }
 
 void WebApiShellyClass::onShellyAdminGet(AsyncWebServerRequest* request)
@@ -49,11 +32,12 @@ void WebApiShellyClass::onShellyAdminGet(AsyncWebServerRequest* request)
     auto& root = response->getRoot();
     const CONFIG_T& config = Configuration.get();
 
+    root["shelly_enable"] = config.Shelly.ShellyEnable;
     root["shelly_hostname_pro3em"] = config.Shelly.Hostname_Pro3EM;
     root["shelly_hostname_plugs"] = config.Shelly.Hostname_PlugS;
-    root["pollinterval"] = config.Shelly.PollInterval;
+    root["limit_enable"] = config.Shelly.LimitEnable;
     root["max_power"] = config.Shelly.MaxPower;
-    root["limit_power"] = config.Shelly.LimitPower;
+    root["target_value"] = config.Shelly.TargetValue;
 
     response->setLength();
     request->send(response);
@@ -98,11 +82,12 @@ void WebApiShellyClass::onShellyAdminPost(AsyncWebServerRequest* request)
         return;
     }
 
-    if (!(root.containsKey("shelly_hostname_pro3em")
+    if (!(root.containsKey("shelly_enable")
+            && root.containsKey("shelly_hostname_pro3em")
             && root.containsKey("shelly_hostname_plugs")
-            && root.containsKey("pollinterval")
+            && root.containsKey("limit_enable")
             && root.containsKey("max_power")
-            && root.containsKey("limit_power"))) {
+            && root.containsKey("target_value"))) {
         retMsg["message"] = "Values are missing!";
         retMsg["code"] = WebApiError::GenericValueMissing;
         response->setLength();
@@ -110,55 +95,56 @@ void WebApiShellyClass::onShellyAdminPost(AsyncWebServerRequest* request)
         return;
     }
 
-    if (root["shelly_hostname_pro3em"].as<String>().length() > SHELLY_MAX_HOSTNAME_STRLEN) {
-        retMsg["message"] = "Shelly Pro 3EM  must maximal " STR(SHELLY_MAX_HOSTNAME_STRLEN) " characters long!";
-        retMsg["code"] = WebApiError::MqttHostnameLength;
-        retMsg["param"]["max"] = SHELLY_MAX_HOSTNAME_STRLEN;
-        response->setLength();
-        request->send(response);
-        return;
-    }
-    if (root["shelly_hostname_plugs"].as<String>().length() > SHELLY_MAX_HOSTNAME_STRLEN) {
-        retMsg["message"] = "Shelly Plug S must maximal " STR(SHELLY_MAX_HOSTNAME_STRLEN) " characters long!";
-        retMsg["code"] = WebApiError::MqttHostnameLength;
-        retMsg["param"]["max"] = SHELLY_MAX_HOSTNAME_STRLEN;
-        response->setLength();
-        request->send(response);
-        return;
-    }
-    if (root["pollinterval"].as<uint32_t>() == 0) {
-        retMsg["message"] = "Poll interval must be greater zero!";
-        retMsg["code"] = WebApiError::DtuPollZero;
-        response->setLength();
-        request->send(response);
-        return;
-    }
-    if (root["max_power"].as<uint32_t>() <= 0 || root["max_power"].as<uint32_t>() >= 3000) {
-        retMsg["message"] = "Max power must be greater zero and less or equal than 3000!";
-        retMsg["code"] = WebApiError::DtuPollZero;
-        response->setLength();
-        request->send(response);
-        return;
-    }
-    if (root["limit_power"].as<uint32_t>() <= 0 || root["limit_power"].as<uint32_t>() >= 3000) {
-        retMsg["message"] = "Max power must be greater zero and less or equal than 3000!";
-        retMsg["code"] = WebApiError::DtuPollZero;
-        response->setLength();
-        request->send(response);
-        return;
+    if (root["shelly_enable"].as<bool>()) {
+        if (root["shelly_hostname_pro3em"].as<String>().length() > SHELLY_MAX_HOSTNAME_STRLEN) {
+            retMsg["message"] = "Shelly Pro 3EM  must maximal " STR(SHELLY_MAX_HOSTNAME_STRLEN) " characters long!";
+            retMsg["code"] = WebApiError::ShellyHostnameLength;
+            retMsg["param"]["max"] = SHELLY_MAX_HOSTNAME_STRLEN;
+            response->setLength();
+            request->send(response);
+            return;
+        }
+        if (root["shelly_hostname_plugs"].as<String>().length() > SHELLY_MAX_HOSTNAME_STRLEN) {
+            retMsg["message"] = "Shelly Plug S must maximal " STR(SHELLY_MAX_HOSTNAME_STRLEN) " characters long!";
+            retMsg["code"] = WebApiError::ShellyHostnameLength;
+            retMsg["param"]["max"] = SHELLY_MAX_HOSTNAME_STRLEN;
+            response->setLength();
+            request->send(response);
+            return;
+        }
+
+        if (root["limit_enable"].as<bool>()) {
+            if (root["max_power"].as<uint32_t>() <= 0 || root["max_power"].as<uint32_t>() > 3000) {
+                retMsg["message"] = "Max power must be greater zero and less than 3000!";
+                retMsg["code"] = WebApiError::MaxPowerLimit;
+                retMsg["param"]["min"] = 0;
+                retMsg["param"]["max"] = 3000;
+                response->setLength();
+                request->send(response);
+                return;
+            }
+            if (root["target_value"].as<int32_t>() < -100 || root["target_value"].as<int32_t>() > 100) {
+                retMsg["message"] = "The target value must be greater -100 and less than 100!";
+                retMsg["code"] = WebApiError::TargetValueLimit;
+                retMsg["param"]["min"] = -100;
+                retMsg["param"]["max"] = 100;
+                response->setLength();
+                request->send(response);
+                return;
+            }
+        }
     }
 
     CONFIG_T& config = Configuration.get();
+    config.Shelly.ShellyEnable = root["shelly_enable"].as<bool>();
     strlcpy(config.Shelly.Hostname_Pro3EM, root["shelly_hostname_pro3em"].as<String>().c_str(), sizeof(config.Shelly.Hostname_Pro3EM));
     strlcpy(config.Shelly.Hostname_PlugS, root["shelly_hostname_plugs"].as<String>().c_str(), sizeof(config.Shelly.Hostname_PlugS));
-    config.Shelly.PollInterval = root["pollinterval"].as<uint32_t>();
+    config.Shelly.LimitEnable = root["limit_enable"].as<bool>();
     config.Shelly.MaxPower = root["max_power"].as<uint32_t>();
-    config.Shelly.LimitPower = root["limit_power"].as<uint32_t>();
+    config.Shelly.TargetValue = root["target_value"].as<int32_t>();
 
     WebApi.writeConfig(retMsg);
 
     response->setLength();
     request->send(response);
-
-    _applyDataTask.enable();
 }

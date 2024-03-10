@@ -5,21 +5,34 @@
         </BootstrapAlert>
 
         <form @submit="saveShellyConfig">
-            <CardElement :text="$t('shellyadmin.ShellyConfiguration')" textVariant="text-bg-primary">
+
+            <CardElement :text="$t('shellyadmin.ShellyGet')" textVariant="text-bg-primary">
+                <InputElement :label="$t('shellyadmin.ShellyGetSwitch')" v-model="shellyConfigList.shelly_enable"
+                    type="checkbox" />
+
                 <InputElement :label="$t('shellyadmin.ShellyPro3em')" v-model="shellyConfigList.shelly_hostname_pro3em"
-                    type="text" maxlength="128" :placeholder="$t('shellyadmin.HostnameHint')" />
+                    type="text" maxlength="128" :placeholder="$t('shellyadmin.HostnameHint')"
+                    v-show="shellyConfigList.shelly_enable" />
 
                 <InputElement :label="$t('shellyadmin.ShellyPlugS')" v-model="shellyConfigList.shelly_hostname_plugs"
-                    type="text" maxlength="128" :placeholder="$t('shellyadmin.HostnameHint')" />
+                    type="text" maxlength="128" :placeholder="$t('shellyadmin.HostnameHint')"
+                    v-show="shellyConfigList.shelly_enable" />
+            </CardElement>
 
-                <InputElement :label="$t('shellyadmin.PollInterval')" v-model="shellyConfigList.pollinterval" type="number"
-                    min="0" max="15" :postfix="$t('shellyadmin.Seconds')" />
+            <CardElement :text="$t('shellyadmin.ShellySet')" textVariant="text-bg-primary" add-space
+                v-show="shellyConfigList.shelly_enable">
+
+                <InputElement :label="$t('shellyadmin.ShellySetSwitch')" v-model="shellyConfigList.limit_enable"
+                    type="checkbox" v-show="shellyConfigList.shelly_enable" />
 
                 <InputElement :label="$t('shellyadmin.MaxPower')" v-model="shellyConfigList.max_power" type="number" min="1"
-                    max="3000" :placeholder="$t('shellyadmin.MaxPowerHint')" />
+                    max="3000" :placeholder="$t('shellyadmin.MaxPowerHint')"
+                    v-show="shellyConfigList.shelly_enable && shellyConfigList.limit_enable" />
 
-                <InputElement :label="$t('shellyadmin.LimitPower')" v-model="shellyConfigList.limit_power" type="number"
-                    min="1" max="3000" :placeholder="$t('shellyadmin.LimitPowerHint')" />
+                <InputElement :label="$t('shellyadmin.TargetValue')" v-model="shellyConfigList.target_value" type="number"
+                    min="-100" max="100" :placeholder="$t('shellyadmin.TargetValueHint')"
+                    v-show="shellyConfigList.shelly_enable && shellyConfigList.limit_enable" />
+
             </CardElement>
             <FormFooter @reload="getShellyConfig" />
         </form>

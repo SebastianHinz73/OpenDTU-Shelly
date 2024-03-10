@@ -136,13 +136,13 @@ struct CONFIG_T {
     } Dtu;
 
     struct {
+        bool ShellyEnable;
         char Hostname_Pro3EM[SHELLY_MAX_HOSTNAME_STRLEN + 1];
         char Hostname_PlugS[SHELLY_MAX_HOSTNAME_STRLEN + 1];
-        uint8_t Ip_pro3em[4];
-        uint8_t Ip_plugs[4];
         uint32_t PollInterval;
+        bool LimitEnable;
         uint32_t MaxPower;
-        uint32_t LimitPower;
+        int32_t TargetValue;
     } Shelly;
 
     struct {

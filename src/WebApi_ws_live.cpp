@@ -6,6 +6,7 @@
 #include "Datastore.h"
 #include "MessageOutput.h"
 #include "ShellyClient.h"
+#include "SunPosition.h"
 #include "Utils.h"
 #include "WebApi.h"
 #include "defaults.h"
@@ -113,11 +114,16 @@ void WebApiWsLiveClass::generateCommonJsonResponse(JsonVariant& root)
     hintObj["radio_problem"] = (Hoymiles.getRadioNrf()->isInitialized() && (!Hoymiles.getRadioNrf()->isConnected() || !Hoymiles.getRadioNrf()->isPVariant())) || (Hoymiles.getRadioCmt()->isInitialized() && (!Hoymiles.getRadioCmt()->isConnected()));
     hintObj["default_password"] = strcmp(Configuration.get().Security.Password, ACCESS_POINT_PASSWORD) == 0;
 
+    const CONFIG_T& config = Configuration.get();
+
     JsonObject shellyObj = root.createNestedObject("shelly");
-    shellyObj["pro3em_value"] = ShellyClient.getData().GetValuePro3EM();
-    shellyObj["pro3em_valid"] = ShellyClient.getData().GetValidPro3EM();
-    shellyObj["plugs_value"] = ShellyClient.getData().GetValuePlugS();
-    shellyObj["plugs_valid"] = ShellyClient.getData().GetValidPlugS();
+    bool bDay = SunPosition.isDayPeriod();
+    shellyObj["pro3em_value"] = ShellyClient.getPro3EMData().GetActValue();
+    shellyObj["pro3em_enabled"] = config.Shelly.ShellyEnable && bDay;
+    shellyObj["plugs_value"] = ShellyClient.getPlugSData().GetActValue();
+    shellyObj["plugs_enabled"] = config.Shelly.ShellyEnable && bDay;
+    shellyObj["limit_value"] = ShellyClient.getActLimit();
+    shellyObj["limit_enabled"] = config.Shelly.ShellyEnable && bDay;
 }
 
 void WebApiWsLiveClass::generateInverterCommonJsonResponse(JsonObject& root, std::shared_ptr<InverterAbstract> inv)

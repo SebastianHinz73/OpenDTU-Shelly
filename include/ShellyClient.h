@@ -2,14 +2,19 @@
 #pragma once
 
 #include "Configuration.h"
+#include "ShellyClientData.h"
 #include <ArduinoJson.h>
 #include <TaskSchedulerDeclarations.h>
 #include <WebSocketsClient.h>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
-#include <mutex>
+
+////////////////////////
+
+#define SHELLY_DTU_VERSION "0.9"
 
 ////////////////////////
 
@@ -32,29 +37,14 @@ public:
     bool IsPro3EM;
 };
 
-class ShellyClientData {
-public:
-    void Update(float pro3EMValue, float plugsValue, bool pro3EMValid, bool plugsValid);
-    float GetValuePro3EM();
-    float GetValuePlugS();
-    bool GetValidPro3EM();
-    bool GetValidPlugS();
-
-private:
-    std::mutex _mutex;
-
-    float _Pro3EMValue;
-    float _PlugsValue;
-    bool _Pro3EMValid;
-    bool _PlugsValid;
-};
-
 class ShellyClientClass {
 public:
     ShellyClientClass() { }
     void init(Scheduler& scheduler);
     void loop();
-    ShellyClientData& getData() { return _ShellyData; }
+    ShellyClientData& getPro3EMData() { return _Pro3EMData; }
+    ShellyClientData& getPlugSData() { return _PlugSData; }
+    float getActLimit() { return _actLimit; }
 
 private:
     void HandleWebsocket(WebSocketData& data, const char* hostname, int poll_intervall, std::function<void(WStype_t type, uint8_t* payload, size_t length)> cbEvent);
@@ -63,12 +53,17 @@ private:
     void Events(WebSocketData& data, WStype_t type, uint8_t* payload, size_t length);
 
     bool JSONPro3EM(WebSocketData& data, DynamicJsonDocument& root, const char* name1, const char* name2, const char* name3);
+    int SetLimit();
+    void SendLimit(float limit, float generatedPower);
 
 private:
     Task _loopTask;
     WebSocketData _Pro3EM;
     WebSocketData _PlugS;
-    ShellyClientData _ShellyData;
+    ShellyClientData _Pro3EMData;
+    ShellyClientData _PlugSData;
+    unsigned long _lastCommandTrigger;
+    float _actLimit;
 };
 
 extern ShellyClientClass ShellyClient;

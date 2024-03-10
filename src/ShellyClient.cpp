@@ -5,7 +5,9 @@
 
 #include "ShellyClient.h"
 #include "MessageOutput.h"
+#include "SunPosition.h"
 #include <Arduino.h>
+#include <Hoymiles.h>
 
 ShellyClientClass ShellyClient;
 
@@ -17,6 +19,7 @@ void ShellyClientClass::init(Scheduler& scheduler)
     _loopTask.enable();
     _Pro3EM.IsPro3EM = true;
     _PlugS.IsPro3EM = false;
+    _actLimit = 0;
 }
 
 void ShellyClientClass::loop()
@@ -24,23 +27,27 @@ void ShellyClientClass::loop()
     while (WiFi.status() != WL_CONNECTED) {
         return;
     }
+    if(!SunPosition.isDayPeriod()) {
+        return;
+    }
 
     const CONFIG_T& config = Configuration.get();
 
-    HandleWebsocket(_Pro3EM, config.Shelly.Hostname_Pro3EM, config.Shelly.PollInterval, ShellyClientClass::EventsPro3EM);
-    HandleWebsocket(_PlugS, config.Shelly.Hostname_PlugS, config.Shelly.PollInterval, ShellyClientClass::EventsPlugS);
-
-    unsigned long t = millis();
-    unsigned long max = config.Shelly.PollInterval * 1000;
-    _ShellyData.Update(_Pro3EM.LastMeasurement, _PlugS.LastMeasurement, (t - _Pro3EM.LastTime) < max, (t - _PlugS.LastTime) < max);
+    int pollInterval = SetLimit();
+    HandleWebsocket(_Pro3EM, config.Shelly.Hostname_Pro3EM, pollInterval, ShellyClientClass::EventsPro3EM);
+    HandleWebsocket(_PlugS, config.Shelly.Hostname_PlugS, pollInterval, ShellyClientClass::EventsPlugS);
 }
 
 void ShellyClientClass::HandleWebsocket(WebSocketData& data, const char* hostname, int poll_intervall, std::function<void(WStype_t type, uint8_t* payload, size_t length)> cbEvent)
 {
+    const CONFIG_T& config = Configuration.get();
+
     bool bDelete = data.Host.compare(hostname) != 0; // hostname changed in configuration
     bDelete |= strlen(hostname) == 0; // IP deleted in configuration
+    bDelete |= !config.Shelly.ShellyEnable; // shelly disabled
 
     bool bNew = bDelete && strlen(hostname) > 0; // deleted and new hostname valid
+    bNew &= config.Shelly.ShellyEnable; // && shelly enable
 
     if (bDelete && data.Client != nullptr) {
         MessageOutput.printf("Delete WebSocketClient. %s\r\n", data.Host.c_str());
@@ -49,7 +56,7 @@ void ShellyClientClass::HandleWebsocket(WebSocketData& data, const char* hostnam
         data.Host = "";
     }
 
-    if (bNew) {
+    if (bNew && data.Client == nullptr) {
         MessageOutput.printf("Add WebSocketClient %s\r\n", hostname);
         data.Client = new WebSocketsClient();
         data.Client->begin(hostname, 80, "/rpc");
@@ -59,9 +66,9 @@ void ShellyClientClass::HandleWebsocket(WebSocketData& data, const char* hostnam
         data.LastTime = millis();
     }
 
-    if (data.Connected && (millis() - data.LastTime > poll_intervall * 1000)) {
+    if (data.Connected && (millis() - data.LastTime > poll_intervall)) {
         data.LastTime = millis();
-        MessageOutput.printf("SEND#########\r\n");
+        MessageOutput.printf("SEND %s#####\r\n", data.IsPro3EM ? "Pro" : "PlugS");
         data.Client->sendTXT("{\"id\":2, \"src\":\"user_1\", \"method\":\"Shelly.GetStatus\"}");
     }
 
@@ -104,11 +111,11 @@ void ShellyClientClass::Events(WebSocketData& data, WStype_t type, uint8_t* payl
 
             if (data.IsPro3EM) {
                 if (JSONPro3EM(data, root, "params", "em:0", "total_act_power") || JSONPro3EM(data, root, "result", "em:0", "total_act_power")) {
-                    MessageOutput.printf("Pro3EM %f \r\n", data.LastMeasurement);
+                    _Pro3EMData.Update(data.LastMeasurement, "Pro");
                 }
             } else {
                 if (JSONPro3EM(data, root, "result", "switch:0", "apower")) {
-                    MessageOutput.printf("PlugS %f \r\n", data.LastMeasurement);
+                    _PlugSData.Update(data.LastMeasurement, "PlugS");
                 }
             }
         }
@@ -141,38 +148,76 @@ bool ShellyClientClass::JSONPro3EM(WebSocketData& data, DynamicJsonDocument& roo
     return false;
 }
 
-// ////////
-
-void ShellyClientData::Update(float pro3EMValue, float plugsValue, bool pro3EMValid, bool plugsValid)
+int ShellyClientClass::SetLimit()
 {
-    std::lock_guard<std::mutex> lock(_mutex);
+    const CONFIG_T& config = Configuration.get();
+    if (!(config.Shelly.ShellyEnable && config.Shelly.LimitEnable)) {
+        return 5000;
+    }
 
-    _Pro3EMValue = pro3EMValue;
-    _PlugsValue = plugsValue;
-    _Pro3EMValid = pro3EMValid;
-    _PlugsValid = plugsValid;
+    float gridPower = _Pro3EMData.GetLowestValue();
+    float generatedPower = _PlugSData.GetActValue();
+    float limit = gridPower + generatedPower - config.Shelly.TargetValue;
+
+    SendLimit(limit, generatedPower);
+
+    if (_PlugSData.GetHighestValue() < 150) {
+        return 5000; // small amount is produced
+    }
+
+    if (_Pro3EMData.GetHighestValue() < 800 && 2 * _PlugSData.GetHighestValue() < _Pro3EMData.GetLowestValue()) {
+        return 2500;
+    }
+    return 500;
 }
 
-float ShellyClientData::GetValuePro3EM()
+void ShellyClientClass::SendLimit(float limit, float generatedPower)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _Pro3EMValue;
-}
+    auto inv = Hoymiles.getInverterByPos(0);
+    if (inv == nullptr) {
+        return;
+    }
 
-float ShellyClientData::GetValuePlugS()
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _PlugsValue;
-}
+    float correctPanelCnt = 0.75; // 3 of 4 pannels installed
+    const CONFIG_T& config = Configuration.get();
 
-bool ShellyClientData::GetValidPro3EM()
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _Pro3EMValid;
-}
+    // too little is generated, round to the next full hundred, avoid unnecessary limit set
+    if (limit > generatedPower + 50) {
+        limit = generatedPower + 50;
+        limit = (int)((limit / 100.0) + 2) * 100;
+    }
 
-bool ShellyClientData::GetValidPlugS()
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _PlugsValid;
+    if (limit > config.Shelly.MaxPower) {
+        limit = config.Shelly.MaxPower;
+    }
+
+    // MessageOutput.printf("SendLimit ?? %.1f\r\n", limit);
+
+    if (_actLimit == limit || abs(_actLimit - limit) < 10) {
+        return;
+    }
+    MessageOutput.printf("SendLimit %.1f\r\n", limit);
+
+    float lastCommand = millis() - _lastCommandTrigger;
+    if (_actLimit < limit && lastCommand < 2500) {
+        return;
+    }
+    if (limit < _actLimit && lastCommand < 1000) {
+        return;
+    }
+    MessageOutput.printf("### SendLimit %.1f\r\n", limit);
+
+    _lastCommandTrigger = millis();
+
+    if (inv != nullptr) {
+        _actLimit = limit;
+
+        if (correctPanelCnt != 1) {
+            limit /= correctPanelCnt;
+            if (limit > 1600) {
+                limit = 1600;
+            }
+        }
+        inv->sendActivePowerControlRequest(limit, PowerLimitControlType::AbsolutNonPersistent);
+    }
 }

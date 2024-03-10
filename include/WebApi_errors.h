@@ -17,6 +17,12 @@ enum WebApiError {
     DtuInvalidCmtFrequency,
     DtuInvalidCmtCountry,
 
+    ShellyBase = 2500,
+    ShellyHostnameLength,
+    MaxPowerLimit,
+    LimitPowerLimit,
+    TargetValueLimit,
+
     ConfigBase = 3000,
     ConfigNotDeleted,
     ConfigSuccess,

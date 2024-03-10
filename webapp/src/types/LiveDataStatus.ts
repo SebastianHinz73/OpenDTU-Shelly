@@ -51,9 +51,11 @@ export interface Hints {
 
 export interface Shelly {
     pro3em_value: number;
-    pro3em_valid: boolean;
+    pro3em_enabled: boolean;
     plugs_value: number;
-    plugs_valid: boolean;
+    plugs_enabled: boolean;
+    limit_value: number;
+    limit_enabled: boolean;
 }
 
 export interface LiveData {
