@@ -20,6 +20,7 @@ enum WebApiError {
     ShellyBase = 2500,
     ShellyHostnameLength,
     MaxPowerLimit,
+    MinPowerLimit,
     LimitPowerLimit,
     TargetValueLimit,
 

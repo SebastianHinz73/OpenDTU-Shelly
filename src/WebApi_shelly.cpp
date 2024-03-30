@@ -37,6 +37,7 @@ void WebApiShellyClass::onShellyAdminGet(AsyncWebServerRequest* request)
     root["shelly_hostname_plugs"] = config.Shelly.Hostname_PlugS;
     root["limit_enable"] = config.Shelly.LimitEnable;
     root["max_power"] = config.Shelly.MaxPower;
+    root["min_power"] = config.Shelly.MinPower;
     root["target_value"] = config.Shelly.TargetValue;
 
     response->setLength();
@@ -87,6 +88,7 @@ void WebApiShellyClass::onShellyAdminPost(AsyncWebServerRequest* request)
             && root.containsKey("shelly_hostname_plugs")
             && root.containsKey("limit_enable")
             && root.containsKey("max_power")
+            && root.containsKey("min_power")
             && root.containsKey("target_value"))) {
         retMsg["message"] = "Values are missing!";
         retMsg["code"] = WebApiError::GenericValueMissing;
@@ -123,7 +125,16 @@ void WebApiShellyClass::onShellyAdminPost(AsyncWebServerRequest* request)
                 request->send(response);
                 return;
             }
-            if (root["target_value"].as<int32_t>() < -100 || root["target_value"].as<int32_t>() > 100) {
+            if (root["min_power"].as<uint32_t>() < 0 || root["min_power"].as<uint32_t>() > 500) {
+                retMsg["message"] = "Min power must be greater or equal zero and less than 500!";
+                retMsg["code"] = WebApiError::MinPowerLimit;
+                retMsg["param"]["min"] = 0;
+                retMsg["param"]["max"] = 500;
+                response->setLength();
+                request->send(response);
+                return;
+            }
+            if (root["target_value"].as<int32_t>() < -100 || root["target_value"].as<int32_t>() > 300) {
                 retMsg["message"] = "The target value must be greater -100 and less than 100!";
                 retMsg["code"] = WebApiError::TargetValueLimit;
                 retMsg["param"]["min"] = -100;
@@ -141,6 +152,7 @@ void WebApiShellyClass::onShellyAdminPost(AsyncWebServerRequest* request)
     strlcpy(config.Shelly.Hostname_PlugS, root["shelly_hostname_plugs"].as<String>().c_str(), sizeof(config.Shelly.Hostname_PlugS));
     config.Shelly.LimitEnable = root["limit_enable"].as<bool>();
     config.Shelly.MaxPower = root["max_power"].as<uint32_t>();
+    config.Shelly.MinPower = root["min_power"].as<uint32_t>();
     config.Shelly.TargetValue = root["target_value"].as<int32_t>();
 
     WebApi.writeConfig(retMsg);

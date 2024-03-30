@@ -14,6 +14,7 @@
 
 WebApiWsLiveClass::WebApiWsLiveClass()
     : _ws("/livedata")
+    , _lastPublishShelly(0)
     , _wsCleanupTask(1 * TASK_SECOND, TASK_FOREVER, std::bind(&WebApiWsLiveClass::wsCleanupTaskCb, this))
     , _sendDataTask(1 * TASK_SECOND, TASK_FOREVER, std::bind(&WebApiWsLiveClass::sendDataTaskCb, this))
 {
@@ -66,12 +67,14 @@ void WebApiWsLiveClass::sendDataTaskCb()
             continue;
         }
 
+        const uint32_t lastUpdateShelly = ShellyClient.getLastUpdate();
         const uint32_t lastUpdateInternal = inv->Statistics()->getLastUpdateFromInternal();
-        if (!((lastUpdateInternal > 0 && lastUpdateInternal > _lastPublishStats[i]) || (millis() - _lastPublishStats[i] > (10 * 1000)))) {
+        if (!((lastUpdateInternal > 0 && lastUpdateInternal > _lastPublishStats[i]) || (lastUpdateShelly > _lastPublishShelly) || (millis() - _lastPublishStats[i] > (10 * 1000)))) {
             continue;
         }
 
         _lastPublishStats[i] = millis();
+        _lastPublishShelly = _lastPublishStats[i];
 
         try {
             std::lock_guard<std::mutex> lock(_mutex);
@@ -123,7 +126,8 @@ void WebApiWsLiveClass::generateCommonJsonResponse(JsonVariant& root)
     shellyObj["plugs_value"] = ShellyClient.getPlugSData().GetActValue();
     shellyObj["plugs_enabled"] = config.Shelly.ShellyEnable && bDay;
     shellyObj["limit_value"] = ShellyClient.getActLimit();
-    shellyObj["limit_enabled"] = config.Shelly.ShellyEnable && bDay;
+    shellyObj["limit_enabled"] = config.Shelly.ShellyEnable && config.Shelly.LimitEnable && bDay;
+    shellyObj["debug"] = ShellyClient.getDebug();
 }
 
 void WebApiWsLiveClass::generateInverterCommonJsonResponse(JsonObject& root, std::shared_ptr<InverterAbstract> inv)

@@ -45,6 +45,8 @@ public:
     ShellyClientData& getPro3EMData() { return _Pro3EMData; }
     ShellyClientData& getPlugSData() { return _PlugSData; }
     float getActLimit() { return _actLimit; }
+    uint32_t getLastUpdate();
+    String getDebug();
 
 private:
     void HandleWebsocket(WebSocketData& data, const char* hostname, int poll_intervall, std::function<void(WStype_t type, uint8_t* payload, size_t length)> cbEvent);
@@ -54,7 +56,9 @@ private:
 
     bool JSONPro3EM(WebSocketData& data, DynamicJsonDocument& root, const char* name1, const char* name2, const char* name3);
     int SetLimit();
-    void SendLimit(float limit, float generatedPower);
+    bool SendLimit(float limit, float generatedPower);
+    bool IsLimitReached(float generatedPower);
+    void SendMqtt(float limit, float pro3em_power, float plugs_power);
 
 private:
     Task _loopTask;
@@ -64,6 +68,7 @@ private:
     ShellyClientData _PlugSData;
     unsigned long _lastCommandTrigger;
     float _actLimit;
+    String _Debug;
 };
 
 extern ShellyClientClass ShellyClient;

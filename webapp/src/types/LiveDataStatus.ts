@@ -56,6 +56,7 @@ export interface Shelly {
     plugs_enabled: boolean;
     limit_value: number;
     limit_enabled: boolean;
+    debug: string;
 }
 
 export interface LiveData {

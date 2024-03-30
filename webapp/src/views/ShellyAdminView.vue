@@ -29,8 +29,12 @@
                     max="3000" :placeholder="$t('shellyadmin.MaxPowerHint')"
                     v-show="shellyConfigList.shelly_enable && shellyConfigList.limit_enable" />
 
+                <InputElement :label="$t('shellyadmin.MinPower')" v-model="shellyConfigList.min_power" type="number"
+                    min="0" max="500" :placeholder="$t('shellyadmin.MinPowerHint')"
+                    v-show="shellyConfigList.shelly_enable && shellyConfigList.limit_enable" />
+
                 <InputElement :label="$t('shellyadmin.TargetValue')" v-model="shellyConfigList.target_value" type="number"
-                    min="-100" max="100" :placeholder="$t('shellyadmin.TargetValueHint')"
+                    min="-100" max="300" :placeholder="$t('shellyadmin.TargetValueHint')"
                     v-show="shellyConfigList.shelly_enable && shellyConfigList.limit_enable" />
 
             </CardElement>

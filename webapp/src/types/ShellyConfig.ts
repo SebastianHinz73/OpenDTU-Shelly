@@ -4,5 +4,6 @@ export interface ShellyConfig {
     shelly_hostname_plugs: string;
     limit_enable: boolean;
     max_power: number;
+    min_power: number;
     target_value: number;
 }

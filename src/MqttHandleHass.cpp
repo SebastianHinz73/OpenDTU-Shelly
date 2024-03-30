@@ -81,6 +81,13 @@ void MqttHandleHassClass::publishConfig()
         publishInverterBinarySensor(inv, "Reachable", "status/reachable", "1", "0");
         publishInverterBinarySensor(inv, "Producing", "status/producing", "1", "0");
 
+        // publish Shelly
+        publishShelly(inv, "Shelly Limit", "shelly/limit", "power", "W");
+        publishShelly(inv, "ShellyPro3em Power", "shelly/pro3em_power", "power", "W");
+        publishShelly(inv, "ShellyPro3em Update Time", "shelly/pro3em_time", "duration", "s");
+        publishShelly(inv, "ShellyPlugS Power", "shelly/plugs_power", "power", "W");
+        publishShelly(inv, "ShellyPlugS Update Time", "shelly/plugs_time", "duration", "s");
+
         // Loop all channels
         for (auto& t : inv->Statistics()->getChannelTypes()) {
             for (auto& c : inv->Statistics()->getChannelsByType(t)) {
@@ -325,6 +332,42 @@ void MqttHandleHassClass::publishDtuSensor(const char* name, const char* device_
     String buffer;
     const String configTopic = "sensor/" + getDtuUniqueId() + "/" + id + "/config";
     serializeJson(root, buffer);
+    publish(configTopic, buffer);
+}
+
+void MqttHandleHassClass::publishShelly(std::shared_ptr<InverterAbstract> inv, const char* caption, const char* stateTopic, const char* device_class, const char* unit_of_measure)
+{
+    DynamicJsonDocument root(1024);
+    if (!Utils::checkJsonAlloc(root, __FUNCTION__, __LINE__)) {
+        return;
+    }
+
+    const String serial = inv->serialString();
+
+    String buttonId = caption;
+    buttonId.replace(" ", "_");
+    buttonId.toLowerCase();
+
+    const String configTopic = "sensor/dtu_" + serial
+        + "/" + buttonId
+        + "/config";
+
+    root["name"] = caption;
+    root["stat_t"] = MqttSettings.getPrefix() + serial + "/" + stateTopic;
+    root["uniq_id"] = serial + "_" + buttonId;
+    root["unit_of_meas"] = unit_of_measure;
+
+    auto object = root.createNestedObject("dev");
+
+    object["name"] = NetworkSettings.getHostname();
+    object["ids"] = serial;
+
+    root["dev_cla"] = device_class;
+    root["stat_cla"] = "measurement";
+
+    String buffer;
+    serializeJson(root, buffer);
+
     publish(configTopic, buffer);
 }
 

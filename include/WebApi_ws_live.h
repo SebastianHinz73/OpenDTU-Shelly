@@ -26,6 +26,7 @@ private:
     AsyncWebSocket _ws;
 
     uint32_t _lastPublishStats[INV_MAX_COUNT] = { 0 };
+    uint32_t _lastPublishShelly;
 
     std::mutex _mutex;
 

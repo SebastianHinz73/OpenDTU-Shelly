@@ -5,9 +5,11 @@
 
 #include "ShellyClient.h"
 #include "MessageOutput.h"
+#include "MqttSettings.h"
 #include "SunPosition.h"
 #include <Arduino.h>
 #include <Hoymiles.h>
+#include <cfloat>
 
 ShellyClientClass ShellyClient;
 
@@ -19,6 +21,9 @@ void ShellyClientClass::init(Scheduler& scheduler)
     _loopTask.enable();
     _Pro3EM.IsPro3EM = true;
     _PlugS.IsPro3EM = false;
+    _Pro3EMData.Init(true);
+    _PlugSData.Init(false);
+
     _actLimit = 0;
 }
 
@@ -27,7 +32,7 @@ void ShellyClientClass::loop()
     while (WiFi.status() != WL_CONNECTED) {
         return;
     }
-    if(!SunPosition.isDayPeriod()) {
+    if (!SunPosition.isDayPeriod()) {
         return;
     }
 
@@ -68,7 +73,7 @@ void ShellyClientClass::HandleWebsocket(WebSocketData& data, const char* hostnam
 
     if (data.Connected && (millis() - data.LastTime > poll_intervall)) {
         data.LastTime = millis();
-        MessageOutput.printf("SEND %s#####\r\n", data.IsPro3EM ? "Pro" : "PlugS");
+        // MessageOutput.printf("SEND %s#####\r\n", data.IsPro3EM ? "Pro" : "PlugS");
         data.Client->sendTXT("{\"id\":2, \"src\":\"user_1\", \"method\":\"Shelly.GetStatus\"}");
     }
 
@@ -111,11 +116,11 @@ void ShellyClientClass::Events(WebSocketData& data, WStype_t type, uint8_t* payl
 
             if (data.IsPro3EM) {
                 if (JSONPro3EM(data, root, "params", "em:0", "total_act_power") || JSONPro3EM(data, root, "result", "em:0", "total_act_power")) {
-                    _Pro3EMData.Update(data.LastMeasurement, "Pro");
+                    _Pro3EMData.Update(data.LastMeasurement);
                 }
             } else {
                 if (JSONPro3EM(data, root, "result", "switch:0", "apower")) {
-                    _PlugSData.Update(data.LastMeasurement, "PlugS");
+                    _PlugSData.Update(data.LastMeasurement);
                 }
             }
         }
@@ -157,67 +162,144 @@ int ShellyClientClass::SetLimit()
 
     float gridPower = _Pro3EMData.GetLowestValue();
     float generatedPower = _PlugSData.GetActValue();
-    float limit = gridPower + generatedPower - config.Shelly.TargetValue;
 
-    SendLimit(limit, generatedPower);
+    if (IsLimitReached(generatedPower)) {
+        float limit = FLT_MIN;
+        float border = 5;
+        if (gridPower > config.Shelly.TargetValue + border) {
+            // increase: iterate to limit
+            limit = _actLimit + abs(gridPower - config.Shelly.TargetValue) * 0.33f;
 
+            // too little is generated, round to the next full hundred, avoid unnecessary limit set
+            // if (limit > generatedPower + 50) {
+            //    limit = (int)((generatedPower / 100.0) + 2) * 100;
+            //}
+        } else if (gridPower < -100) {
+            // decrease: set new limit
+            limit = config.Shelly.MinPower - config.Shelly.TargetValue;
+            _Pro3EMData.SetLastValue(config.Shelly.TargetValue);
+
+        } else if (gridPower < config.Shelly.TargetValue - border) {
+            // decrease: set new limit
+            // limit = _actLimit - abs(gridPower - config.Shelly.TargetValue) * 0.7f;
+            limit = generatedPower - abs(gridPower - config.Shelly.TargetValue) * 0.7f;
+
+            // eventuell nicht aktuelles Limit nehmen, sondern PlugS
+
+            // decrease: set new lower limit
+            // limit = gridPower + generatedPower - config.Shelly.TargetValue;
+
+            _Pro3EMData.SetLastValue(config.Shelly.TargetValue);
+            MessageOutput.printf("decrease %.1f +- %.1f, %.1f\r\n", gridPower, generatedPower - config.Shelly.TargetValue, limit);
+        }
+
+        if (limit != FLT_MIN) {
+            if (SendLimit(limit, generatedPower)) {
+                SendMqtt(limit, gridPower, generatedPower);
+            }
+        }
+    }
+
+    // small amount is produced
     if (_PlugSData.GetHighestValue() < 150) {
-        return 5000; // small amount is produced
+        return 5000;
     }
 
     if (_Pro3EMData.GetHighestValue() < 800 && 2 * _PlugSData.GetHighestValue() < _Pro3EMData.GetLowestValue()) {
         return 2500;
     }
+
+    // maybe stove with alternating power, or other devices with high power consumption which can switch off any time
     return 500;
 }
 
-void ShellyClientClass::SendLimit(float limit, float generatedPower)
+bool ShellyClientClass::SendLimit(float limit, float generatedPower)
 {
     auto inv = Hoymiles.getInverterByPos(0);
     if (inv == nullptr) {
-        return;
+        return false;
     }
 
-    float correctPanelCnt = 0.75; // 3 of 4 pannels installed
+    float correctPanelCnt = 1.0; //0.75 => 3 of 4 pannels installed
     const CONFIG_T& config = Configuration.get();
 
-    // too little is generated, round to the next full hundred, avoid unnecessary limit set
-    if (limit > generatedPower + 50) {
-        limit = generatedPower + 50;
-        limit = (int)((limit / 100.0) + 2) * 100;
+    if (limit < config.Shelly.MinPower - config.Shelly.TargetValue) {
+        limit = config.Shelly.MinPower - config.Shelly.TargetValue;
     }
 
     if (limit > config.Shelly.MaxPower) {
         limit = config.Shelly.MaxPower;
     }
 
-    // MessageOutput.printf("SendLimit ?? %.1f\r\n", limit);
-
     if (_actLimit == limit || abs(_actLimit - limit) < 10) {
-        return;
+        return false;
     }
-    MessageOutput.printf("SendLimit %.1f\r\n", limit);
 
     float lastCommand = millis() - _lastCommandTrigger;
-    if (_actLimit < limit && lastCommand < 2500) {
-        return;
+    if (lastCommand < 3500) {
+        return true;
     }
-    if (limit < _actLimit && lastCommand < 1000) {
-        return;
-    }
-    MessageOutput.printf("### SendLimit %.1f\r\n", limit);
 
     _lastCommandTrigger = millis();
 
-    if (inv != nullptr) {
-        _actLimit = limit;
+    _actLimit = limit;
+    MessageOutput.printf("### SendLimit %.1f\r\n", limit);
 
-        if (correctPanelCnt != 1) {
-            limit /= correctPanelCnt;
-            if (limit > 1600) {
-                limit = 1600;
-            }
+    if (correctPanelCnt != 1) {
+        limit /= correctPanelCnt;
+        if (limit > config.Shelly.MaxPower) {
+            limit = config.Shelly.MaxPower;
         }
-        inv->sendActivePowerControlRequest(limit, PowerLimitControlType::AbsolutNonPersistent);
     }
+    inv->sendActivePowerControlRequest(limit, PowerLimitControlType::AbsolutNonPersistent);
+
+    return true;
+}
+
+uint32_t ShellyClientClass::getLastUpdate()
+{
+    uint32_t pro = _Pro3EMData.GetUpdateTime();
+    uint32_t plugs = _PlugSData.GetUpdateTime();
+
+    return pro > plugs ? pro : plugs;
+}
+
+bool ShellyClientClass::IsLimitReached(float generatedPower)
+{
+    if ((millis() - _lastCommandTrigger) < 2000) {
+        float diff = abs(generatedPower - _actLimit);
+
+        // Configuration.get().Shelly.TargetValue;
+        // float l =
+        // if (diff > _actLimit * 0.1) {
+        //     return false;
+        //}
+    }
+    return true;
+}
+
+void ShellyClientClass::SendMqtt(float limit, float pro3em_power, float plugs_power)
+{
+    if (!MqttSettings.getConnected() || !Hoymiles.isAllRadioIdle()) {
+        _loopTask.forceNextIteration();
+        return;
+    }
+
+    // Loop all inverters
+    for (uint8_t i = 0; i < Hoymiles.getNumInverters(); i++) {
+        auto inv = Hoymiles.getInverterByPos(i);
+        const String subtopic = inv->serialString();
+
+        MqttSettings.publish(subtopic + "/shelly/limit", String(limit));
+        MqttSettings.publish(subtopic + "/shelly/pro3em_power", String(pro3em_power));
+        MqttSettings.publish(subtopic + "/shelly/pro3em_time", String(_Pro3EMData.GetCircularBufferTime() / 1000));
+        MqttSettings.publish(subtopic + "/shelly/plugs_power", String(plugs_power));
+        MqttSettings.publish(subtopic + "/shelly/plugs_time", String(_PlugSData.GetCircularBufferTime() / 1000));
+    }
+}
+
+String ShellyClientClass::getDebug()
+{
+    String info = String(_Pro3EMData.GetCircularBufferTime() / 1000) + ", " + String(_PlugSData.GetCircularBufferTime() / 1000);
+    return info;
 }

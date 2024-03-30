@@ -65,6 +65,7 @@ private:
     void publishInverterButton(std::shared_ptr<InverterAbstract> inv, const char* caption, const char* icon, const char* category, const char* deviceClass, const char* subTopic, const char* payload);
     void publishInverterNumber(std::shared_ptr<InverterAbstract> inv, const char* caption, const char* icon, const char* category, const char* commandTopic, const char* stateTopic, const char* unitOfMeasure, const int16_t min = 1, const int16_t max = 100);
     void publishInverterBinarySensor(std::shared_ptr<InverterAbstract> inv, const char* caption, const char* subTopic, const char* payload_on, const char* payload_off);
+    void publishShelly(std::shared_ptr<InverterAbstract> inv, const char* caption, const char* stateTopic, const char* device_class, const char* unit_of_measure);
 
     static void createInverterInfo(DynamicJsonDocument& doc, std::shared_ptr<InverterAbstract> inv);
     static void createDtuInfo(DynamicJsonDocument& doc);

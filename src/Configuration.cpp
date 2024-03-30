@@ -103,6 +103,7 @@ bool ConfigurationClass::write()
     shelly["shelly_hostname_plugs"] = config.Shelly.Hostname_PlugS;
     shelly["limit_enable"] = config.Shelly.LimitEnable;
     shelly["max_power"] = config.Shelly.MaxPower;
+    shelly["min_power"] = config.Shelly.MinPower;
     shelly["target_value"] = config.Shelly.TargetValue;
 
     JsonObject security = doc.createNestedObject("security");
@@ -280,6 +281,7 @@ bool ConfigurationClass::read()
     strlcpy(config.Shelly.Hostname_PlugS, shelly["shelly_hostname_plugs"] | SHELLY_HOST, sizeof(config.Shelly.Hostname_PlugS));
     config.Shelly.LimitEnable = shelly["limit_enable"] | SHELLY_LIMIT_ENABLE;
     config.Shelly.MaxPower = shelly["max_power"] | SHELLY_MAX_POWER;
+    config.Shelly.MinPower = shelly["min_power"] | SHELLY_MIN_POWER;
     config.Shelly.TargetValue = shelly["target_value"] | SHELLY_TARGET_VALUE;
 
     JsonObject security = doc["security"];

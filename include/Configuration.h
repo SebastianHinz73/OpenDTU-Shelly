@@ -25,7 +25,7 @@
 #define SHELLY_MAX_HOSTNAME_STRLEN 128
 
 #define INV_MAX_NAME_STRLEN 31
-#define INV_MAX_COUNT 10
+#define INV_MAX_COUNT 1
 #define INV_MAX_CHAN_COUNT 6
 
 #define CHAN_MAX_NAME_STRLEN 31
@@ -142,6 +142,7 @@ struct CONFIG_T {
         uint32_t PollInterval;
         bool LimitEnable;
         uint32_t MaxPower;
+        uint32_t MinPower;
         int32_t TargetValue;
     } Shelly;
 

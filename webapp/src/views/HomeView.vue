@@ -58,6 +58,9 @@
                                     <div style="padding-right: 2em;" v-if="liveData.shelly.plugs_enabled">
                                         ShellyPlugS: {{ liveData.shelly.plugs_value.toFixed(1) }}
                                     </div>
+                                    <div style="padding-right: 2em;" v-if="liveData.shelly.plugs_enabled">
+                                        {{ liveData.shelly.debug }}
+                                    </div>
 
                                     <div style="padding-right: 2em;">
                                         {{ $t('home.DataAge') }} {{ $t('home.Seconds', { 'val': $n(inverter.data_age) }) }}
