@@ -20,19 +20,19 @@
 
 
             <div class="tab-content" id="v-pills-tabContent" :class="{
-                'col-sm-9 col-md-10': inverterData.length > 1,
-                'col-sm-12 col-md-12': inverterData.length == 1
-            }">
+        'col-sm-9 col-md-10': inverterData.length > 1,
+        'col-sm-12 col-md-12': inverterData.length == 1
+    }">
                 <div v-for="inverter in inverterData" :key="inverter.serial" class="tab-pane fade show"
                     :id="'v-pills-' + inverter.serial" role="tabpanel"
                     :aria-labelledby="'v-pills-' + inverter.serial + '-tab'" tabindex="0">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center" :class="{
-                            'text-bg-tertiary': !inverter.poll_enabled,
-                            'text-bg-danger': inverter.poll_enabled && !inverter.reachable,
-                            'text-bg-warning': inverter.poll_enabled && inverter.reachable && !inverter.producing,
-                            'text-bg-primary': inverter.poll_enabled && inverter.reachable && inverter.producing,
-                        }">
+        'text-bg-tertiary': !inverter.poll_enabled,
+        'text-bg-danger': inverter.poll_enabled && !inverter.reachable,
+        'text-bg-warning': inverter.poll_enabled && inverter.reachable && !inverter.producing,
+        'text-bg-primary': inverter.poll_enabled && inverter.reachable && inverter.producing,
+    }">
                             <div class="p-1 flex-grow-1">
                                 <div class="d-flex flex-wrap">
                                     <div style="padding-right: 2em;">
@@ -43,30 +43,44 @@
                                     </div>
                                     <div style="padding-right: 2em;" v-if="!liveData.shelly.limit_enabled">
                                         {{ $t('home.CurrentLimit') }}<template v-if="inverter.limit_absolute > -1"> {{
-                                            $n(inverter.limit_absolute, 'decimalNoDigits')
-                                        }} W | </template>{{ $n(inverter.limit_relative / 100, 'percent') }}
+        $n(inverter.limit_absolute, 'decimalNoDigits')
+    }} W | </template>{{ $n(inverter.limit_relative / 100, 'percent') }}
                                     </div>
 
                                     <div style="padding-right: 2em;" v-if="liveData.shelly.limit_enabled">
                                         {{ $t('home.CurrentLimit') }}<template v-if="inverter.limit_absolute > -1"> {{
-                                            liveData.shelly.limit_value.toFixed(1)
-                                        }} W</template>
+        liveData.shelly.limit_value.toFixed(1)
+    }} W</template>
                                     </div>
-                                    <div style="padding-right: 2em;" v-if="liveData.shelly.pro3em_enabled">
-                                        ShellyPro3EM: {{ liveData.shelly.pro3em_value.toFixed(1) }}
+                                    <div style="padding-right: 1em;" v-if="liveData.shelly.pro3em_enabled">
+                                        Pro3EM+PlugS: {{ liveData.shelly.combined_value.toFixed(1) }}
                                     </div>
-                                    <div style="padding-right: 2em;" v-if="liveData.shelly.plugs_enabled">
-                                        ShellyPlugS: {{ liveData.shelly.plugs_value.toFixed(1) }}
+                                    <div style="padding-right: 1em;" v-if="liveData.shelly.moreinfo_enabled">
+                                        {{ liveData.shelly.combined_debug }}
                                     </div>
-                                    <div style="padding-right: 2em;" v-if="liveData.shelly.plugs_enabled">
-                                        {{ liveData.shelly.debug }}
+
+                                    <div style="padding-right: 1em;" v-if="liveData.shelly.pro3em_enabled">
+                                        Pro3EM: {{ liveData.shelly.pro3em_value.toFixed(1) }}
+                                    </div>
+                                    <div style="padding-right: 1em;" v-if="liveData.shelly.moreinfo_enabled">
+                                        {{ liveData.shelly.pro3em_debug }}
+                                    </div>
+                                    <div style="padding-right: 1em;" v-if="liveData.shelly.plugs_enabled">
+                                        PlugS: {{ liveData.shelly.plugs_value.toFixed(1) }}
+                                    </div>
+                                    <div style="padding-right: 1em;" v-if="liveData.shelly.moreinfo_enabled">
+                                        {{ liveData.shelly.plugs_debug }}
                                     </div>
 
                                     <div style="padding-right: 2em;">
-                                        {{ $t('home.DataAge') }} {{ $t('home.Seconds', { 'val': $n(inverter.data_age) }) }}
+                                        {{ $t('home.DataAge') }} {{ $t('home.Seconds', { 'val': $n(inverter.data_age) })
+                                        }}
                                         <template v-if="inverter.data_age > 300">
                                             / {{ calculateAbsoluteTime(inverter.data_age) }}
                                         </template>
+                                    </div>
+                                    <div style="padding-right: 1em;" v-if="liveData.shelly.debug_enabled">
+                                        {{ liveData.shelly.debug }}
                                     </div>
                                 </div>
                             </div>
@@ -110,7 +124,8 @@
                                 <div class="btn-group" role="group">
                                     <button v-if="inverter.events >= 0" type="button"
                                         class="btn btn-sm btn-secondary position-relative"
-                                        @click="onShowEventlog(inverter.serial)" v-tooltip :title="$t('home.ShowEventlog')">
+                                        @click="onShowEventlog(inverter.serial)" v-tooltip
+                                        :title="$t('home.ShowEventlog')">
                                         <BIconJournalText style="font-size:24px;" />
                                         <span
                                             class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-danger">
@@ -126,12 +141,13 @@
                                 <template
                                     v-for="chanType in [{ obj: inverter.INV, name: 'INV' }, { obj: inverter.AC, name: 'AC' }, { obj: inverter.DC, name: 'DC' }].reverse()">
                                     <template v-if="chanType.obj != null">
-                                        <template v-for="channel in Object.keys(chanType.obj).sort().reverse().map(x => +x)"
+                                        <template
+                                            v-for="channel in Object.keys(chanType.obj).sort().reverse().map(x => +x)"
                                             :key="channel">
                                             <template v-if="(chanType.name != 'DC') ||
-                                                (chanType.name == 'DC' && getSumIrridiation(inverter) == 0) ||
-                                                (chanType.name == 'DC' && getSumIrridiation(inverter) > 0 && chanType.obj[channel].Irradiation?.max || 0 > 0)
-                                                ">
+        (chanType.name == 'DC' && getSumIrridiation(inverter) == 0) ||
+        (chanType.name == 'DC' && getSumIrridiation(inverter) > 0 && chanType.obj[channel].Irradiation?.max || 0 > 0)
+        ">
                                                 <div class="col">
                                                     <InverterChannelInfo :channelData="chanType.obj[channel]"
                                                         :channelType="chanType.name" :channelNumber="channel" />
@@ -199,11 +215,11 @@
             </label>
             <div class="col-sm-9">
                 <span class="badge" :class="{
-                    'text-bg-danger': currentLimitList.limit_set_status == 'Failure',
-                    'text-bg-warning': currentLimitList.limit_set_status == 'Pending',
-                    'text-bg-success': currentLimitList.limit_set_status == 'Ok',
-                    'text-bg-secondary': currentLimitList.limit_set_status == 'Unknown',
-                }">
+        'text-bg-danger': currentLimitList.limit_set_status == 'Failure',
+        'text-bg-warning': currentLimitList.limit_set_status == 'Pending',
+        'text-bg-success': currentLimitList.limit_set_status == 'Ok',
+        'text-bg-secondary': currentLimitList.limit_set_status == 'Unknown',
+    }">
                     {{ $t('home.' + currentLimitList.limit_set_status) }}
                 </span>
             </div>
@@ -211,7 +227,7 @@
 
         <div class="row mb-3">
             <label for="inputTargetLimit" class="col-sm-3 col-form-label">{{ $t('home.SetLimit')
-            }}</label>
+                }}</label>
             <div class="col-sm-9">
                 <div class="input-group">
                     <input type="number" name="inputTargetLimit" class="form-control" id="inputTargetLimit"
@@ -221,9 +237,9 @@
                         }}</button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" @click="onSelectType(1)" href="#">{{
-                            $t('home.Relative') }}</a></li>
+        $t('home.Relative') }}</a></li>
                         <li><a class="dropdown-item" @click="onSelectType(0)" href="#">{{
-                            $t('home.Absolute') }}</a></li>
+        $t('home.Absolute') }}</a></li>
                     </ul>
                 </div>
                 <div v-if="targetLimitType == 0" class="alert alert-secondary mt-3" role="alert"
@@ -233,10 +249,10 @@
 
         <template #footer>
             <button type="button" class="btn btn-danger" @click="onSetLimitSettings(true)">{{
-                $t('home.SetPersistent') }}</button>
+        $t('home.SetPersistent') }}</button>
 
             <button type="button" class="btn btn-danger" @click="onSetLimitSettings(false)">{{
-                $t('home.SetNonPersistent') }}</button>
+        $t('home.SetNonPersistent') }}</button>
         </template>
     </ModalDialog>
 
@@ -247,14 +263,14 @@
 
         <div class="row mb-3 align-items-center">
             <label for="inputLastPowerSet" class="col col-form-label">{{ $t('home.LastPowerSetStatus')
-            }}</label>
+                }}</label>
             <div class="col">
                 <span class="badge" :class="{
-                        'text-bg-danger': successCommandPower == 'Failure',
-                        'text-bg-warning': successCommandPower == 'Pending',
-                        'text-bg-success': successCommandPower == 'Ok',
-                        'text-bg-secondary': successCommandPower == 'Unknown',
-                    }">
+        'text-bg-danger': successCommandPower == 'Failure',
+        'text-bg-warning': successCommandPower == 'Pending',
+        'text-bg-success': successCommandPower == 'Ok',
+        'text-bg-secondary': successCommandPower == 'Unknown',
+    }">
                     {{ $t('home.' + successCommandPower) }}
                 </span>
             </div>

@@ -386,7 +386,9 @@
     "shellyadmin": {
         "ShellySettings": "Paramètres du DTU Shelly",
         "ShellyGetSwitch": "Activer la requête Shelly",
+        "ShellyMoreInfoSwitch": "Activer info",
         "ShellySetSwitch": "Activer l'alimentation zéro",
+        "ShellyDebugSwitch": "Activer débogage",
         "ShellyGet": "Requête",
         "ShellySet": "Alimentation zéro",
         "ShellyPro3em": "Shelly Pro 3EM",
@@ -399,6 +401,9 @@
         "TargetValue": "Valeur cible",
         "TargetValueHint": "Somme de la consommation et de l'électricité solaire produite. Valeur par défaut : 0",
         "Seconds": "Secondes",
+        "Percent": "{per} Pourcentage",
+        "ZeroFeedInLevel": "Niveau d'alimentation zéro",
+        "ZeroFeedInLevelHint": "Il existe certaines périodes pendant lesquelles la consommation et la production d'électricité sont regroupées. 0% signifie que l'on n'injecte pas d'électricité dans le réseau. 100% signifie que, dans la mesure du possible, aucune électricité n'est prélevée sur le réseau."
     },
     "securityadmin": {
         "SecuritySettings": "Paramètres de sécurité",

@@ -17,6 +17,10 @@
                 <InputElement :label="$t('shellyadmin.ShellyPlugS')" v-model="shellyConfigList.shelly_hostname_plugs"
                     type="text" maxlength="128" :placeholder="$t('shellyadmin.HostnameHint')"
                     v-show="shellyConfigList.shelly_enable" />
+
+                <InputElement :label="$t('shellyadmin.ShellyMoreInfoSwitch')"
+                    v-model="shellyConfigList.shelly_moreinfo_enable" type="checkbox"
+                    v-show="shellyConfigList.shelly_enable" />
             </CardElement>
 
             <CardElement :text="$t('shellyadmin.ShellySet')" textVariant="text-bg-primary" add-space
@@ -25,18 +29,35 @@
                 <InputElement :label="$t('shellyadmin.ShellySetSwitch')" v-model="shellyConfigList.limit_enable"
                     type="checkbox" v-show="shellyConfigList.shelly_enable" />
 
-                <InputElement :label="$t('shellyadmin.MaxPower')" v-model="shellyConfigList.max_power" type="number" min="1"
-                    max="3000" :placeholder="$t('shellyadmin.MaxPowerHint')"
+                <InputElement :label="$t('shellyadmin.ShellyDebugSwitch')" v-model="shellyConfigList.debug_enable"
+                    type="checkbox" v-show="shellyConfigList.shelly_enable && shellyConfigList.limit_enable" />
+
+                <InputElement :label="$t('shellyadmin.MaxPower')" v-model="shellyConfigList.max_power" type="number"
+                    min="1" max="3000" :placeholder="$t('shellyadmin.MaxPowerHint')"
                     v-show="shellyConfigList.shelly_enable && shellyConfigList.limit_enable" />
 
                 <InputElement :label="$t('shellyadmin.MinPower')" v-model="shellyConfigList.min_power" type="number"
                     min="0" max="500" :placeholder="$t('shellyadmin.MinPowerHint')"
                     v-show="shellyConfigList.shelly_enable && shellyConfigList.limit_enable" />
 
-                <InputElement :label="$t('shellyadmin.TargetValue')" v-model="shellyConfigList.target_value" type="number"
-                    min="-100" max="300" :placeholder="$t('shellyadmin.TargetValueHint')"
+                <InputElement :label="$t('shellyadmin.TargetValue')" v-model="shellyConfigList.target_value"
+                    type="number" min="-100" max="300" :placeholder="$t('shellyadmin.TargetValueHint')"
                     v-show="shellyConfigList.shelly_enable && shellyConfigList.limit_enable" />
 
+                <div class="row mb-3" v-if="shellyConfigList.limit_enable">
+                    <label for="inputFeedInLevel" class="col-sm-2 col-form-label">
+                        {{ $t('shellyadmin.ZeroFeedInLevel') }}
+                        <BIconInfoCircle v-tooltip :title="$t('shellyadmin.ZeroFeedInLevelHint')" />
+                    </label>
+                    <div class="col-sm-10">
+                        <div class="input-group mb-3">
+                            <input type="range" class="form-control form-range" v-model="shellyConfigList.feed_in_level"
+                                min="0" max="100" id="inputFeedInLevel" aria-describedby="basic-addon1"
+                                style="height: unset;" />
+                            <span class="input-group-text" id="basic-addon1">{{ FeedInLevelText }}</span>
+                        </div>
+                    </div>
+                </div>
             </CardElement>
             <FormFooter @reload="getShellyConfig" />
         </form>
@@ -74,6 +95,11 @@ export default defineComponent({
     },
     created() {
         this.getShellyConfig();
+    },
+    computed: {
+        FeedInLevelText() {
+            return this.$t("shellyadmin.Percent", { per: this.$n(this.shellyConfigList.feed_in_level * 1) });
+        },
     },
     methods: {
         getShellyConfig() {

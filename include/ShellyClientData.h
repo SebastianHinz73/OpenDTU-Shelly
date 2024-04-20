@@ -6,31 +6,48 @@
 
 #define LAST_DATA_ENTRIES 40
 
+enum ShellyClientType_t {
+    Pro3EM,
+    PlugS,
+    Combined,
+};
+
 class ShellyClientData {
 public:
     ShellyClientData();
-    void Init(bool bPro3EM);
-    void Update(float value);
-    float GetActValue();
-    float GetLowestValue();
-    float GetHighestValue();
+    void Update(ShellyClientType_t type, float value);
+    float GetActValue(ShellyClientType_t type);
+    float GetMinValue(ShellyClientType_t type);
+    float GetMaxValue(ShellyClientType_t type);
+    float GetFactoredValue(ShellyClientType_t type);
     void SetLastValue(float value);
-    uint32_t GetUpdateTime();
-    uint32_t GetCircularBufferTime();
+    uint32_t GetUpdateTime(ShellyClientType_t type);
+    uint32_t GetMinMaxTime(ShellyClientType_t type);
 
 private:
-    void CalculateLowestHighest();
+    struct Data {
+        Data()
+        {
+            minMaxTime = 5000;
+        }
+        CircularBuffer<time_t, LAST_DATA_ENTRIES> times; // seconds since 1970
+        CircularBuffer<float, LAST_DATA_ENTRIES> values;
+
+        float lastValue;
+        float min;
+        float max;
+
+        uint32_t lastChangedTime;
+        uint32_t minMaxTime;
+        ShellyClientType_t type;
+    };
+    void CalculateMinMax(Data& data);
+    Data& GetData(ShellyClientType_t type);
 
 private:
     std::mutex _mutex;
 
-    CircularBuffer<time_t, LAST_DATA_ENTRIES> _times; // seconds since 1970
-    CircularBuffer<float, LAST_DATA_ENTRIES> _values;
-
-    float _Value;
-    float _Lowest;
-    float _Highest;
-    uint32_t _LastChangedTime;
-    uint32_t _CircularBufferTime;
-    bool _Pro3EM;
+    Data _Pro3EM;
+    Data _PlugS;
+    Data _Combined;
 };

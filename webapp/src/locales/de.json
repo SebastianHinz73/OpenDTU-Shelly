@@ -385,8 +385,10 @@
     },
     "shellyadmin": {
         "ShellySettings": "Shelly-Einstellungen",
-        "ShellyGetSwitch": "Shelly Abfrage aktivieren",
+        "ShellyGetSwitch": "Abfrage aktivieren",
+        "ShellyMoreInfoSwitch": "Infos aktivieren",
         "ShellySetSwitch": "Nulleinspeisung aktivieren",
+        "ShellyDebugSwitch": "Debug aktivieren",
         "ShellyGet": "Abfrage",
         "ShellySet": "Nulleinspeisung",
         "ShellyPro3em": "Shelly Pro 3EM",
@@ -399,6 +401,9 @@
         "TargetValue": "Ziel Wert",
         "TargetValueHint": "Summe von Verbrauch und erzeugtem Solarstrom. Default: 0",
         "Seconds": "Sekunden",
+        "Percent": "{per} Prozent",
+        "ZeroFeedInLevel": "Nulleinspeisung Level",
+        "ZeroFeedInLevelHint": "Es gibt bestimmte Zeitabschnitte in denen Verbrauch und erzeugter Strom zusammengefasst werden. 0% bedeutet, daß möglichst kein Strom eingespeist wird. 100% bedeutet, daß möglichst kein Strom aus dem Netz bezogen wird."
     },
     "securityadmin": {
         "SecuritySettings": "Sicherheitseinstellungen",

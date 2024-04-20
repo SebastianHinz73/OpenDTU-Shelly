@@ -121,12 +121,34 @@ void WebApiWsLiveClass::generateCommonJsonResponse(JsonVariant& root)
 
     JsonObject shellyObj = root.createNestedObject("shelly");
     bool bDay = SunPosition.isDayPeriod();
-    shellyObj["pro3em_value"] = ShellyClient.getPro3EMData().GetActValue();
+    ShellyClientData& shellyData = ShellyClient.getShellyData();
+
+    shellyObj["pro3em_value"] = shellyData.GetActValue(ShellyClientType_t::Pro3EM);
     shellyObj["pro3em_enabled"] = config.Shelly.ShellyEnable && bDay;
-    shellyObj["plugs_value"] = ShellyClient.getPlugSData().GetActValue();
+    shellyObj["pro3em_debug"] = "[" + String(shellyData.GetFactoredValue(ShellyClientType_t::Pro3EM), 0) + "W, "
+        + String(shellyData.GetMinMaxTime(ShellyClientType_t::Pro3EM) / 1000.0f, 0) + "s: "
+        + String(shellyData.GetMinValue(ShellyClientType_t::Pro3EM), 0) + "W,"
+        + String(shellyData.GetMaxValue(ShellyClientType_t::Pro3EM), 0) + "W] "
+        + String(ShellyClient.GetPollInterval(ShellyClientType_t::Pro3EM) / 1000.0f, 1) + "s";
+
+    shellyObj["plugs_value"] = shellyData.GetActValue(ShellyClientType_t::PlugS);
     shellyObj["plugs_enabled"] = config.Shelly.ShellyEnable && bDay;
+    shellyObj["plugs_debug"] = "[" + String(shellyData.GetFactoredValue(ShellyClientType_t::PlugS), 0) + "W, "
+        + String(shellyData.GetMinMaxTime(ShellyClientType_t::PlugS) / 1000.0f, 0) + "s: "
+        + String(shellyData.GetMinValue(ShellyClientType_t::PlugS), 0) + "W,"
+        + String(shellyData.GetMaxValue(ShellyClientType_t::PlugS), 0) + "W] "
+        + String(ShellyClient.GetPollInterval(ShellyClientType_t::PlugS) / 1000.0f, 1) + "s";
+
+    shellyObj["combined_value"] = shellyData.GetActValue(ShellyClientType_t::Combined);
+    shellyObj["combined_enabled"] = config.Shelly.ShellyEnable && bDay;
+    shellyObj["combined_debug"] = "[" + String(shellyData.GetMinMaxTime(ShellyClientType_t::Combined) / 1000.0f, 0) + "s: "
+        + String(shellyData.GetMinValue(ShellyClientType_t::Combined), 0) + "W,"
+        + String(shellyData.GetMaxValue(ShellyClientType_t::Combined), 0) + "W]";
+
     shellyObj["limit_value"] = ShellyClient.getActLimit();
     shellyObj["limit_enabled"] = config.Shelly.ShellyEnable && config.Shelly.LimitEnable && bDay;
+    shellyObj["debug_enabled"] = config.Shelly.DebugEnable;
+    shellyObj["moreinfo_enabled"] = config.Shelly.ShellyEnable && config.Shelly.ShellyMoreInfoEnable;
     shellyObj["debug"] = ShellyClient.getDebug();
 }
 

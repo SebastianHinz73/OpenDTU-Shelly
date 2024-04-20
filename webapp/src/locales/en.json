@@ -385,8 +385,10 @@
     },
     "shellyadmin": {
         "ShellySettings": "Shelly Settings",
-        "ShellyGetSwitch": "Activate Shelly Query",
+        "ShellyGetSwitch": "Activate Query",
+        "ShellyMoreInfoSwitch": "Activate infos",
         "ShellySetSwitch": "Activate zero feed in",
+        "ShellyDebugSwitch": "Activate debug",
         "ShellyGet": "Query",
         "ShellySet": "Zero feed in",
         "ShellyPro3em": "Shelly Pro 3EM",
@@ -399,6 +401,9 @@
         "TargetValue": "Target value",
         "TargetValueHint": "Sum of consumption and generated solar power. Default: 0",
         "Seconds": "Seconds",
+        "Percent": "{per} Percent",
+        "ZeroFeedInLevel": "Zero feed in level",
+        "ZeroFeedInLevelHint": "There are certain time periods in which consumption and generated electricity are combined. 0% means that as little electricity as possible is fed into the grid. 100% means that as little electricity as possible is consumed from the grid."
     },
     "securityadmin": {
         "SecuritySettings": "Security Settings",

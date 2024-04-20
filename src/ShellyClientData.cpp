@@ -4,114 +4,168 @@
  */
 
 #include "ShellyClientData.h"
+#include "Configuration.h"
 #include "MessageOutput.h"
 #include <cfloat>
 #include <esp32-hal.h>
 
 ShellyClientData::ShellyClientData()
-    : _CircularBufferTime(5000)
-    , _Pro3EM(true)
 {
+    _Pro3EM.type = ShellyClientType_t::Pro3EM;
+    _PlugS.type = ShellyClientType_t::PlugS;
+    _Combined.type = ShellyClientType_t::Combined;
 }
 
-void ShellyClientData::Init(bool bPro3EM)
-{
-    _Pro3EM = bPro3EM;
-}
-
-void ShellyClientData::Update(float value)
+void ShellyClientData::Update(ShellyClientType_t type, float value)
 {
     std::lock_guard<std::mutex> lock(_mutex);
+    if (type == ShellyClientType_t::Combined) {
+        return;
+    }
+    Data& data = GetData(type);
 
     unsigned long now = millis();
-    if (_Value != value) {
-        _LastChangedTime = now;
+    if (data.lastValue != value) {
+        data.lastChangedTime = now;
     }
-    _Value = value;
+    data.lastValue = value;
 
-    _times.unshift(now);
-    _values.unshift(value);
+    data.times.unshift(now);
+    data.values.unshift(value);
 
-    CalculateLowestHighest();
+    CalculateMinMax(data);
+
+    Data& other = GetData(type == ShellyClientType_t::Pro3EM ? ShellyClientType_t::PlugS : ShellyClientType_t::Pro3EM);
+
+    if (data.values.size() > 2 && other.values.size() > 1) {
+
+        // 'other' last time measurement between 'data' last two measurements
+        if (data.times[0] >= other.times[0] && other.times[0] >= data.times[1] && data.times[0] > data.times[1]) {
+            // linear factor between two values
+            float f1 = (other.times[0] - data.times[1]) / (data.times[0] - data.times[1]);
+            float interpolatedValue = data.values[0] * f1 + data.values[1] * (1.0 - f1);
+
+            value = other.values[0] + interpolatedValue;
+            now = other.times[0];
+            if (_Combined.lastValue != value) {
+                _Combined.lastChangedTime = now;
+            }
+            _Combined.lastValue = value;
+
+            _Combined.values.unshift(value);
+            _Combined.times.unshift(now);
+
+            CalculateMinMax(_Combined);
+        }
+    }
 }
 
-void ShellyClientData::CalculateLowestHighest()
+void ShellyClientData::CalculateMinMax(Data& data)
 {
-    time_t min_time = millis() - _CircularBufferTime;
+    time_t min_time = millis() - data.minMaxTime;
 
-    _Lowest = FLT_MAX;
-    _Highest = FLT_MIN;
+    data.min = FLT_MAX;
+    data.max = FLT_MIN;
 
-    for (int i = 0; i < _values.size(); i++) {
-        if (_times[i] < min_time) {
+    for (int i = 0; i < data.values.size(); i++) {
+        if (data.times[i] < min_time) {
             break;
         }
-        if (_values[i] < _Lowest) {
-            _Lowest = _values[i];
+        if (data.values[i] < data.min) {
+            data.min = data.values[i];
         }
-        if (_values[i] > _Highest) {
-            _Highest = _values[i];
+        if (data.values[i] > data.max) {
+            data.max = data.values[i];
         }
     }
-    if (_Lowest == FLT_MAX) {
-        _Lowest = _Value;
+    if (data.min == FLT_MAX) {
+        data.min = data.lastValue;
     }
-    if (_Highest == FLT_MIN) {
-        _Highest = _Value;
+    if (data.max == FLT_MIN) {
+        data.max = data.lastValue;
     }
 
-    if (_Highest - _Lowest > 500) {
-        _CircularBufferTime = 12000;
+    if (data.type == ShellyClientType_t::Pro3EM || data.type == ShellyClientType_t::Combined) {
+        if (data.max - data.min > 200) {
+            data.minMaxTime = 15000;
+        } else if (data.max - data.min > 100) {
+            data.minMaxTime = 9000;
+        } else {
+            data.minMaxTime = 5000;
+        }
     } else {
-        _CircularBufferTime = 9000;
+        if (data.max - data.min > 150) {
+            data.minMaxTime = 10000;
+        } else if (data.max - data.min > 30) {
+            data.minMaxTime = 5000;
+        } else {
+            data.minMaxTime = 3000;
+        }
     }
-
-    /*if (_Highest - _Lowest > 150) {
-       _CircularBufferTime = 9000;
-   } else if (_Highest - _Lowest > 70) {
-       _CircularBufferTime = 5000;
-   } else {
-       _CircularBufferTime = 3000;
-   }*/
 }
 
-float ShellyClientData::GetActValue()
+ShellyClientData::Data& ShellyClientData::GetData(ShellyClientType_t type)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _Value;
+    if (type == ShellyClientType_t::Pro3EM) {
+        return _Pro3EM;
+    } else if (type == ShellyClientType_t::PlugS) {
+        return _PlugS;
+    }
+    return _Combined;
 }
 
-float ShellyClientData::GetLowestValue()
+float ShellyClientData::GetActValue(ShellyClientType_t type)
 {
     std::lock_guard<std::mutex> lock(_mutex);
-    return _Lowest;
+    return GetData(type).lastValue;
 }
 
-float ShellyClientData::GetHighestValue()
+float ShellyClientData::GetMinValue(ShellyClientType_t type)
 {
     std::lock_guard<std::mutex> lock(_mutex);
-    return _Highest;
+    return GetData(type).min;
+}
+
+float ShellyClientData::GetMaxValue(ShellyClientType_t type)
+{
+    std::lock_guard<std::mutex> lock(_mutex);
+    return GetData(type).max;
+}
+
+float ShellyClientData::GetFactoredValue(ShellyClientType_t type)
+{
+    std::lock_guard<std::mutex> lock(_mutex);
+    float min = GetData(type).min;
+    float max = GetData(type).max;
+
+    const CONFIG_T& config = Configuration.get();
+
+    float factor = static_cast<float>(config.Shelly.FeedInLevel) / 100.0;
+    if (type == ShellyClientType_t::PlugS) {
+        factor = 1.0 - factor;
+    }
+    return min + (max - min) * factor;
 }
 
 void ShellyClientData::SetLastValue(float value)
 {
     std::lock_guard<std::mutex> lock(_mutex);
-    if (_values.size() > 0) {
-        _values.shift();
-        _values.unshift(value);
+    if (_Pro3EM.values.size() > 0) {
+        _Pro3EM.values.shift();
+        _Pro3EM.values.unshift(value);
 
-        CalculateLowestHighest();
+        CalculateMinMax(_Pro3EM);
     }
 }
 
-uint32_t ShellyClientData::GetUpdateTime()
+uint32_t ShellyClientData::GetUpdateTime(ShellyClientType_t type)
 {
     std::lock_guard<std::mutex> lock(_mutex);
-    return _LastChangedTime;
+    return GetData(type).lastChangedTime;
 }
 
-uint32_t ShellyClientData::GetCircularBufferTime()
+uint32_t ShellyClientData::GetMinMaxTime(ShellyClientType_t type)
 {
     std::lock_guard<std::mutex> lock(_mutex);
-    return _CircularBufferTime;
+    return GetData(type).minMaxTime;
 }
