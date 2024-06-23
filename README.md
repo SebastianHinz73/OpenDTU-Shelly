@@ -4,4 +4,4 @@ This is a fork of OpenDTU. The OpenDTU project can be found [here](https://githu
 
 The aim of this repository is to realize a zero feed in with Shelly components. The Shelly Pro3EM and Shelly Plug S are used.
 
-It is not finished yet. It is planned to finish it by 04/2024.
+It is not finished yet.

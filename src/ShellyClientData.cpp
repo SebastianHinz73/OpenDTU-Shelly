@@ -87,7 +87,7 @@ void ShellyClientData::CalculateMinMax(Data& data)
 
     if (data.type == ShellyClientType_t::Pro3EM || data.type == ShellyClientType_t::Combined) {
         if (data.max - data.min > 200) {
-            data.minMaxTime = 15000;
+            data.minMaxTime = 20000;
         } else if (data.max - data.min > 100) {
             data.minMaxTime = 9000;
         } else {

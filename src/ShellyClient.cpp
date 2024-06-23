@@ -209,7 +209,7 @@ void ShellyClientClass::SetLimit()
             limit = static_cast<int>(limit + 0.5) - 0.1;
         }
         // border = min(1, 2);
-        _shellyClientData.SetLastValue(config.Shelly.TargetValue - border);
+        //_shellyClientData.SetLastValue(config.Shelly.TargetValue - border);
         Debug("d");
     } else {
         _increaseCnt = 0;
@@ -224,6 +224,9 @@ void ShellyClientClass::SetLimit()
 
         SendLimitResult_t result = SendLimit(limit, generatedPower);
         switch (result) {
+        case SendLimitResult_t::NoInverter:
+            Debug("N");
+            break;
         case SendLimitResult_t::SendOk:
             Debug(limit);
             Debug("S");
@@ -254,7 +257,7 @@ void ShellyClientClass::SetLimit()
 SendLimitResult_t ShellyClientClass::SendLimit(float limit, float generatedPower)
 {
     auto inv = Hoymiles.getInverterByPos(0);
-    if (inv == nullptr) {
+    if (inv == nullptr || !inv->isReachable()) {
         return SendLimitResult_t::NoInverter;
     }
 
