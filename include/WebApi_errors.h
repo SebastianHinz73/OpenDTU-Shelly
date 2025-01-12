@@ -18,6 +18,13 @@ enum WebApiError {
     DtuInvalidCmtFrequency,
     DtuInvalidCmtCountry,
 
+    ShellyBase = 2500,
+    ShellyHostnameLength,
+    MaxPowerLimit,
+    MinPowerLimit,
+    LimitPowerLimit,
+    TargetValueLimit,
+
     FileBase = 3000,
     FileNotDeleted,
     FileSuccess,

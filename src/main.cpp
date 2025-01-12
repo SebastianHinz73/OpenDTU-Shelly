@@ -19,6 +19,7 @@
 #include "PinMapping.h"
 #include "RestartHelper.h"
 #include "Scheduler.h"
+#include "ShellyClient.h"
 #include "SunPosition.h"
 #include "Utils.h"
 #include "WebApi.h"
@@ -149,6 +150,8 @@ void setup()
     LedSingle.init(scheduler);
     MessageOutput.println("done");
 
+    ShellyClient.init(scheduler);
+    MessageOutput.println("done");
     InverterSettings.init(scheduler);
 
     Datastore.init(scheduler);

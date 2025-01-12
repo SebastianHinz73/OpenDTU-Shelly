@@ -6,6 +6,7 @@
 #include "Configuration.h"
 #include "NetworkSettings.h"
 #include "PinMapping.h"
+#include "ShellyClient.h"
 #include "WebApi.h"
 #include "__compiled_constants.h"
 #include <AsyncJson.h>
@@ -79,6 +80,7 @@ void WebApiSysstatusClass::onSystemStatus(AsyncWebServerRequest* request)
     snprintf(version, sizeof(version), "%d.%d.%d", CONFIG_VERSION >> 24 & 0xff, CONFIG_VERSION >> 16 & 0xff, CONFIG_VERSION >> 8 & 0xff);
     root["config_version"] = version;
     root["git_hash"] = __COMPILED_GIT_HASH__;
+    root["shellydtu_version"] = SHELLY_DTU_VERSION;
     root["pioenv"] = PIOENV;
 
     root["uptime"] = esp_timer_get_time() / 1000000;

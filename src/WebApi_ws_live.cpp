@@ -5,6 +5,8 @@
 #include "WebApi_ws_live.h"
 #include "Datastore.h"
 #include "MessageOutput.h"
+#include "ShellyClient.h"
+#include "SunPosition.h"
 #include "Utils.h"
 #include "WebApi.h"
 #include "defaults.h"
@@ -12,6 +14,7 @@
 
 WebApiWsLiveClass::WebApiWsLiveClass()
     : _ws("/livedata")
+    , _lastPublishShelly(0)
     , _wsCleanupTask(1 * TASK_SECOND, TASK_FOREVER, std::bind(&WebApiWsLiveClass::wsCleanupTaskCb, this))
     , _sendDataTask(1 * TASK_SECOND, TASK_FOREVER, std::bind(&WebApiWsLiveClass::sendDataTaskCb, this))
 {
@@ -48,7 +51,9 @@ void WebApiWsLiveClass::reload()
 
     auto const& config = Configuration.get();
 
-    if (config.Security.AllowReadonly) { return; }
+    if (config.Security.AllowReadonly) {
+        return;
+    }
 
     _ws.enable(false);
     _simpleDigestAuth.setPassword(config.Security.Password);
@@ -77,12 +82,14 @@ void WebApiWsLiveClass::sendDataTaskCb()
             continue;
         }
 
+        const uint32_t lastUpdateShelly = ShellyClient.getLastUpdate();
         const uint32_t lastUpdateInternal = inv->Statistics()->getLastUpdateFromInternal();
-        if (!((lastUpdateInternal > 0 && lastUpdateInternal > _lastPublishStats[i]) || (millis() - _lastPublishStats[i] > (10 * 1000)))) {
+        if (!((lastUpdateInternal > 0 && lastUpdateInternal > _lastPublishStats[i]) || (lastUpdateShelly > _lastPublishShelly) || (millis() - _lastPublishStats[i] > (10 * 1000)))) {
             continue;
         }
 
         _lastPublishStats[i] = millis();
+        _lastPublishShelly = _lastPublishStats[i];
 
         try {
             std::lock_guard<std::mutex> lock(_mutex);
@@ -125,6 +132,40 @@ void WebApiWsLiveClass::generateCommonJsonResponse(JsonVariant& root)
     hintObj["time_sync"] = !getLocalTime(&timeinfo, 5);
     hintObj["radio_problem"] = (Hoymiles.getRadioNrf()->isInitialized() && (!Hoymiles.getRadioNrf()->isConnected() || !Hoymiles.getRadioNrf()->isPVariant())) || (Hoymiles.getRadioCmt()->isInitialized() && (!Hoymiles.getRadioCmt()->isConnected()));
     hintObj["default_password"] = strcmp(Configuration.get().Security.Password, ACCESS_POINT_PASSWORD) == 0;
+
+    const CONFIG_T& config = Configuration.get();
+
+    JsonObject shellyObj = root["shelly"].to<JsonObject>();
+    bool bDay = SunPosition.isDayPeriod();
+    ShellyClientData& shellyData = ShellyClient.getShellyData();
+
+    shellyObj["pro3em_value"] = shellyData.GetActValue(ShellyClientType_t::Pro3EM);
+    shellyObj["pro3em_enabled"] = config.Shelly.ShellyEnable && bDay;
+    shellyObj["pro3em_debug"] = "[" + String(shellyData.GetFactoredValue(ShellyClientType_t::Pro3EM), 0) + "W, "
+        + String(shellyData.GetMinMaxTime(ShellyClientType_t::Pro3EM) / 1000.0f, 0) + "s: "
+        + String(shellyData.GetMinValue(ShellyClientType_t::Pro3EM), 0) + "W,"
+        + String(shellyData.GetMaxValue(ShellyClientType_t::Pro3EM), 0) + "W] "
+        + String(ShellyClient.GetPollInterval(ShellyClientType_t::Pro3EM) / 1000.0f, 1) + "s";
+
+    shellyObj["plugs_value"] = shellyData.GetActValue(ShellyClientType_t::PlugS);
+    shellyObj["plugs_enabled"] = config.Shelly.ShellyEnable && bDay;
+    shellyObj["plugs_debug"] = "[" + String(shellyData.GetFactoredValue(ShellyClientType_t::PlugS), 0) + "W, "
+        + String(shellyData.GetMinMaxTime(ShellyClientType_t::PlugS) / 1000.0f, 0) + "s: "
+        + String(shellyData.GetMinValue(ShellyClientType_t::PlugS), 0) + "W,"
+        + String(shellyData.GetMaxValue(ShellyClientType_t::PlugS), 0) + "W] "
+        + String(ShellyClient.GetPollInterval(ShellyClientType_t::PlugS) / 1000.0f, 1) + "s";
+
+    shellyObj["combined_value"] = shellyData.GetActValue(ShellyClientType_t::Combined);
+    shellyObj["combined_enabled"] = config.Shelly.ShellyEnable && bDay;
+    shellyObj["combined_debug"] = "[" + String(shellyData.GetMinMaxTime(ShellyClientType_t::Combined) / 1000.0f, 0) + "s: "
+        + String(shellyData.GetMinValue(ShellyClientType_t::Combined), 0) + "W,"
+        + String(shellyData.GetMaxValue(ShellyClientType_t::Combined), 0) + "W]";
+
+    shellyObj["limit_value"] = ShellyClient.getActLimit();
+    shellyObj["limit_enabled"] = config.Shelly.ShellyEnable && config.Shelly.LimitEnable && bDay;
+    shellyObj["debug_enabled"] = config.Shelly.DebugEnable;
+    shellyObj["moreinfo_enabled"] = config.Shelly.ShellyEnable && config.Shelly.ShellyMoreInfoEnable;
+    shellyObj["debug"] = ShellyClient.getDebug();
 }
 
 void WebApiWsLiveClass::generateInverterCommonJsonResponse(JsonObject& root, std::shared_ptr<InverterAbstract> inv)

@@ -59,6 +59,10 @@
                                 </router-link>
                             </li>
                             <li>
+                                <router-link @click="onClick" class="dropdown-item" to="/settings/shelly">{{
+                                    $t('menu.ShellySettings') }}</router-link>
+                            </li>
+                            <li>
                                 <router-link @click="onClick" class="dropdown-item" to="/settings/security"
                                     >{{ $t('menu.SecuritySettings') }}
                                 </router-link>
