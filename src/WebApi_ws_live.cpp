@@ -76,32 +76,34 @@ void WebApiWsLiveClass::sendDataTaskCb()
     }
 
     // Loop all inverters
-    for (uint8_t i = 0; i < Hoymiles.getNumInverters(); i++) {
+    for (uint8_t i = 0; i < Hoymiles.getNumInverters() || i < 1; i++) {
         auto inv = Hoymiles.getInverterByPos(i);
-        if (inv == nullptr) {
-            continue;
+        if (inv != nullptr) {
+            const uint32_t lastUpdateInternal = inv->Statistics()->getLastUpdateFromInternal();
+            if (!((lastUpdateInternal > 0 && lastUpdateInternal > _lastPublishStats[i]) || (millis() - _lastPublishStats[i] > (10 * 1000)))) {
+                continue;
+            }
+            _lastPublishStats[i] = millis();
         }
-
-        const uint32_t lastUpdateShelly = ShellyClient.getLastUpdate();
-        const uint32_t lastUpdateInternal = inv->Statistics()->getLastUpdateFromInternal();
-        if (!((lastUpdateInternal > 0 && lastUpdateInternal > _lastPublishStats[i]) || (lastUpdateShelly > _lastPublishShelly) || (millis() - _lastPublishStats[i] > (10 * 1000)))) {
-            continue;
-        }
-
-        _lastPublishStats[i] = millis();
-        _lastPublishShelly = _lastPublishStats[i];
 
         try {
             std::lock_guard<std::mutex> lock(_mutex);
             JsonDocument root;
             JsonVariant var = root;
 
-            auto invArray = var["inverters"].to<JsonArray>();
-            auto invObject = invArray.add<JsonObject>();
+            if (inv != nullptr) {
 
-            generateCommonJsonResponse(var);
-            generateInverterCommonJsonResponse(invObject, inv);
-            generateInverterChannelJsonResponse(invObject, inv);
+                auto invArray = var["inverters"].to<JsonArray>();
+                auto invObject = invArray.add<JsonObject>();
+
+                generateCommonJsonResponse(var);
+                generateInverterCommonJsonResponse(invObject, inv);
+                generateInverterChannelJsonResponse(invObject, inv);
+            }
+            if (true /*ShellyClient.getLastUpdate() < _lastPublishShelly*/) {
+                _lastPublishShelly = millis();
+                generateShellyJsonResponse(var);
+            }
 
             if (!Utils::checkJsonAlloc(root, __FUNCTION__, __LINE__)) {
                 continue;
@@ -132,7 +134,10 @@ void WebApiWsLiveClass::generateCommonJsonResponse(JsonVariant& root)
     hintObj["time_sync"] = !getLocalTime(&timeinfo, 5);
     hintObj["radio_problem"] = (Hoymiles.getRadioNrf()->isInitialized() && (!Hoymiles.getRadioNrf()->isConnected() || !Hoymiles.getRadioNrf()->isPVariant())) || (Hoymiles.getRadioCmt()->isInitialized() && (!Hoymiles.getRadioCmt()->isConnected()));
     hintObj["default_password"] = strcmp(Configuration.get().Security.Password, ACCESS_POINT_PASSWORD) == 0;
+}
 
+void WebApiWsLiveClass::generateShellyJsonResponse(JsonVariant& root)
+{
     const CONFIG_T& config = Configuration.get();
 
     JsonObject shellyObj = root["shelly"].to<JsonObject>();
@@ -309,6 +314,7 @@ void WebApiWsLiveClass::onLivedataStatus(AsyncWebServerRequest* request)
         }
 
         generateCommonJsonResponse(root);
+        generateShellyJsonResponse(root);
 
         WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
 

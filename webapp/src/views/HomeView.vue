@@ -9,6 +9,7 @@
     >
         <HintView :hints="liveData.hints" />
         <InverterTotalInfo :totalData="liveData.total" /><br />
+        <ShellyInfo :shellyData="liveData.shelly" :totalData="liveData.total" v-if="liveData.shelly.pro3em_enabled || liveData.shelly.plugs_enabled || liveData.shelly.limit_enabled"/><br />
         <div class="row gy-3">
             <div class="col-sm-3 col-md-2" :style="[inverterData.length == 1 ? { display: 'none' } : {}]">
                 <div
@@ -81,47 +82,18 @@
                                     <div style="padding-right: 2em">
                                         {{ $t('home.SerialNumber') }}{{ inverter.serial }}
                                     </div>
-                                    <div style="padding-right: 2em;" v-if="!liveData.shelly.limit_enabled">
+                                    <div style="padding-right: 2em">
                                         {{ $t('home.CurrentLimit')
                                         }}<template v-if="inverter.limit_absolute > -1">
                                             {{ $n(inverter.limit_absolute, 'decimalNoDigits') }} W | </template
                                         >{{ $n(inverter.limit_relative / 100, 'percentOneDigit') }}
                                     </div>
-
-                                    <div style="padding-right: 2em;" v-if="liveData.shelly.limit_enabled">
-                                        {{ $t('home.CurrentLimit') }}<template v-if="inverter.limit_absolute > -1"> {{
-        liveData.shelly.limit_value.toFixed(1)
-    }} W</template>
-                                    </div>
-                                    <div style="padding-right: 1em;" v-if="liveData.shelly.pro3em_enabled">
-                                        Pro3EM+PlugS: {{ liveData.shelly.combined_value.toFixed(1) }}
-                                    </div>
-                                    <div style="padding-right: 1em;" v-if="liveData.shelly.moreinfo_enabled">
-                                        {{ liveData.shelly.combined_debug }}
-                                    </div>
-
-                                    <div style="padding-right: 1em;" v-if="liveData.shelly.pro3em_enabled">
-                                        Pro3EM: {{ liveData.shelly.pro3em_value.toFixed(1) }}
-                                    </div>
-                                    <div style="padding-right: 1em;" v-if="liveData.shelly.moreinfo_enabled">
-                                        {{ liveData.shelly.pro3em_debug }}
-                                    </div>
-                                    <div style="padding-right: 1em;" v-if="liveData.shelly.plugs_enabled">
-                                        PlugS: {{ liveData.shelly.plugs_value.toFixed(1) }}
-                                    </div>
-                                    <div style="padding-right: 1em;" v-if="liveData.shelly.moreinfo_enabled">
-                                        {{ liveData.shelly.plugs_debug }}
-                                    </div>
-
                                     <div style="padding-right: 2em">
                                         {{ $t('home.DataAge') }}
                                         {{ $t('home.Seconds', { val: $n(inverter.data_age) }) }}
                                         <template v-if="inverter.data_age > 300">
                                             / {{ calculateAbsoluteTime(inverter.data_age) }}
                                         </template>
-                                    </div>
-                                    <div style="padding-right: 1em;" v-if="liveData.shelly.debug_enabled">
-                                        {{ liveData.shelly.debug }}
                                     </div>
                                 </div>
                             </div>
@@ -529,6 +501,7 @@ import GridProfile from '@/components/GridProfile.vue';
 import HintView from '@/components/HintView.vue';
 import InverterChannelInfo from '@/components/InverterChannelInfo.vue';
 import InverterTotalInfo from '@/components/InverterTotalInfo.vue';
+import ShellyInfo from '@/components/ShellyInfo.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
 import type { DevInfoStatus } from '@/types/DevInfoStatus';
 import type { EventlogItems } from '@/types/EventlogStatus';
@@ -566,6 +539,7 @@ export default defineComponent({
         HintView,
         InverterChannelInfo,
         InverterTotalInfo,
+        ShellyInfo,
         ModalDialog,
         BIconArrowCounterclockwise,
         BIconBroadcast,
