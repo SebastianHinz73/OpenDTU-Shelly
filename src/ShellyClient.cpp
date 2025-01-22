@@ -110,7 +110,7 @@ void ShellyClientClass::Events(WebSocketData& data, WStype_t type, uint8_t* payl
         // MessageOutput.printf("[WSc] get text: %s\r\n", payload);
         {
             JsonDocument root;
-            const DeserializationError error = deserializeJson(root, payload);
+            const DeserializationError error = deserializeJson(root, payload, length);
 
             if (error) {
                 MessageOutput.printf("error %s\r\n", payload);

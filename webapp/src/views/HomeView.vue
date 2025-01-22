@@ -10,6 +10,11 @@
         <HintView :hints="liveData.hints" />
         <InverterTotalInfo :totalData="liveData.total" /><br />
         <ShellyInfo :shellyData="liveData.shelly" :totalData="liveData.total" v-if="liveData.shelly.pro3em_enabled || liveData.shelly.plugs_enabled || liveData.shelly.limit_enabled"/><br />
+        <div class="btn-group" role="group">
+                <button type="button" class="btn btn-primary" :onClick="buttonClick">
+                    {{ $t('console.ClearConsole') }}
+                </button>
+            </div>
         <div class="row gy-3">
             <div class="col-sm-3 col-md-2" :style="[inverterData.length == 1 ? { display: 'none' } : {}]">
                 <div
@@ -934,6 +939,11 @@ export default defineComponent({
                 return '-';
             }
             return this.$n(val_small / val_large, 'percent');
+        },
+        buttonClick() {
+            console.log('Send');
+            console.log(JSON.stringify(this.liveData.shelly));
+            this.socket.send(JSON.stringify(this.liveData.shelly));
         },
     },
 });

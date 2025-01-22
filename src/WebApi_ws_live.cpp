@@ -277,6 +277,23 @@ void WebApiWsLiveClass::onWebsocketEvent(AsyncWebSocket* server, AsyncWebSocketC
         MessageOutput.printf("Websocket: [%s][%u] connect\r\n", server->url(), client->id());
     } else if (type == WS_EVT_DISCONNECT) {
         MessageOutput.printf("Websocket: [%s][%u] disconnect\r\n", server->url(), client->id());
+    } else {
+        MessageOutput.printf("Websocket Type: [%d], len = %d\r\n", type, len);
+
+        JsonDocument root;
+        const DeserializationError error = deserializeJson(root, data, len);
+
+        if (error) {
+            MessageOutput.printf("error %s\r\n", data);
+            return;
+        }
+        if (root["pro3em_value"].is<double_t>()) {
+            MessageOutput.printf("found pro3em_value\r\n");
+
+        } else {
+            MessageOutput.printf("not found pro3em_value\r\n");
+        }
+        MessageOutput.printf("data %s\r\n", data);
     }
 }
 

@@ -11,6 +11,13 @@
                     }}
                     <small class="text-muted">{{ totalData.Power.u }}</small>
                 </h2>
+                <div class="col text-end">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-primary" :onClick="buttonClick">
+                    {{ $t('console.ClearConsole') }}
+                </button>
+            </div>
+        </div>
             </CardElement>
         </div>
         <div class="col" v-if="shellyData.plugs_enabled">
@@ -54,6 +61,12 @@ export default defineComponent({
     props: {
         shellyData: { type: Object as PropType<Shelly>, required: true },
         totalData: { type: Object as PropType<Total>, required: true },
+    },
+    methods: {
+        buttonClick() {
+            //this.consoleBuffer = '';
+        },
+
     },
 });
 </script>
