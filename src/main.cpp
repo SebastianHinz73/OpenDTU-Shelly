@@ -89,7 +89,7 @@ void setup()
 
     // Load PinMapping
     MessageOutput.print("Reading PinMapping... ");
-    if (PinMapping.init(String(Configuration.get().Dev_PinMapping))) {
+    if (PinMapping.init(Configuration.get().Dev_PinMapping)) {
         MessageOutput.print("found valid mapping ");
     } else {
         MessageOutput.print("using default config ");
@@ -97,7 +97,7 @@ void setup()
     const auto& pin = PinMapping.get();
     MessageOutput.println("done");
 
-    // Initialize WiFi
+    // Initialize Network
     MessageOutput.print("Initialize Network... ");
     NetworkSettings.init(scheduler);
     MessageOutput.println("done");
