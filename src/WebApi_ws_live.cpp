@@ -147,7 +147,7 @@ void WebApiWsLiveClass::generateShellyJsonResponse(JsonVariant& root)
     const CONFIG_T& config = Configuration.get();
 
     JsonObject shellyObj = root["shelly"].to<JsonObject>();
-    bool bDay = SunPosition.isDayPeriod();
+    bool bDay = true;//SunPosition.isDayPeriod();
     ShellyClientData& shellyData = ShellyClient.getShellyData();
 
     shellyObj["pro3em_value"] = shellyData.GetActValue(ShellyClientType_t::Pro3EM);
@@ -283,11 +283,11 @@ void WebApiWsLiveClass::onWebsocketEvent(AsyncWebSocket* server, AsyncWebSocketC
         MessageOutput.printf("Websocket: [%s][%u] connect\r\n", server->url(), client->id());
     } else if (type == WS_EVT_DISCONNECT) {
         MessageOutput.printf("Websocket: [%s][%u] disconnect\r\n", server->url(), client->id());
-    } else {
+    } else if (type == WS_EVT_DATA) {
         MessageOutput.printf("Websocket Type: [%d], len = %d\r\n", type, len);
 
         JsonDocument root;
-        const DeserializationError error = deserializeJson(root, data, len);
+        const DeserializationError error = deserializeJson(root, data);
 
         if (error) {
             MessageOutput.printf("error %s\r\n", data);

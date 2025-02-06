@@ -1,20 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
-#include <CircularBuffer.h>
+#include "RamBuffer.h"
 #include <mutex>
 
 #define LAST_DATA_ENTRIES 40
 
-enum ShellyClientType_t {
-    Pro3EM,
-    PlugS,
-    Combined,
-};
-
 class ShellyClientData {
 public:
     ShellyClientData();
+    ~ShellyClientData();
+
     void Update(ShellyClientType_t type, float value);
     float GetActValue(ShellyClientType_t type);
     float GetMinValue(ShellyClientType_t type);
@@ -25,6 +21,7 @@ public:
     uint32_t GetMinMaxTime(ShellyClientType_t type);
 
 private:
+    /*
     struct Data {
         Data()
         {
@@ -43,11 +40,12 @@ private:
     };
     void CalculateMinMax(Data& data);
     Data& GetData(ShellyClientType_t type);
-
+    */
 private:
     std::mutex _mutex;
+    RamBuffer* _ramBuffer;
 
-    Data _Pro3EM;
-    Data _PlugS;
-    Data _Combined;
+    // Data _Pro3EM;
+    // Data _PlugS;
+    // Data _Combined;
 };

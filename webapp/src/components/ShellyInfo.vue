@@ -11,13 +11,9 @@
                     }}
                     <small class="text-muted">{{ totalData.Power.u }}</small>
                 </h2>
-                <div class="col text-end">
-            <div class="btn-group" role="group">
-                <button type="button" class="btn btn-primary" :onClick="buttonClick">
-                    {{ $t('console.ClearConsole') }}
-                </button>
-            </div>
-        </div>
+                <div class="btn-group" role="group">
+                    {{ shellyData.pro3em_debug }}
+                </div>
             </CardElement>
         </div>
         <div class="col" v-if="shellyData.plugs_enabled">
@@ -31,6 +27,9 @@
                     }}
                    <small class="text-muted">{{ totalData.Power.u }}</small>
                 </h2>
+                <div class="btn-group" role="group">
+                    {{ shellyData.plugs_debug }}
+                </div>
             </CardElement>
         </div>
         <div class="col" v-if="shellyData.limit_enabled">
@@ -44,6 +43,9 @@
                     }}
                    <small class="text-muted">{{ totalData.Power.u }}</small>
                 </h2>
+                <div class="btn-group" role="group">
+                    {{ shellyData.debug }}
+                </div>
             </CardElement>
         </div>
     </div>

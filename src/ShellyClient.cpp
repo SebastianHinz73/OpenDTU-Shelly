@@ -13,8 +13,8 @@
 
 ShellyClientClass ShellyClient;
 
-ShellyClientClass::ShellyClientClass() 
-   : _loopTask(TASK_IMMEDIATE, TASK_FOREVER, std::bind(&ShellyClientClass::loop, this))
+ShellyClientClass::ShellyClientClass()
+    : _loopTask(TASK_IMMEDIATE, TASK_FOREVER, std::bind(&ShellyClientClass::loop, this))
 {
 }
 
@@ -23,7 +23,9 @@ void ShellyClientClass::init(Scheduler& scheduler)
     scheduler.addTask(_loopTask);
     _loopTask.enable();
     _Pro3EM.ShellyType = ShellyClientType_t::Pro3EM;
+    _Pro3EM.MaxInterval = 5000;
     _PlugS.ShellyType = ShellyClientType_t::PlugS;
+    _PlugS.MaxInterval = 5000;
 
     _actLimit = 0;
     _increaseCnt = 0;
@@ -34,9 +36,9 @@ void ShellyClientClass::loop()
     while (WiFi.status() != WL_CONNECTED) {
         return;
     }
-    if (!SunPosition.isDayPeriod()) {
-        return;
-    }
+    // if (!SunPosition.isDayPeriod()) {
+    //     return;
+    // }
 
     const CONFIG_T& config = Configuration.get();
 
@@ -49,6 +51,7 @@ void ShellyClientClass::loop()
 void ShellyClientClass::HandleWebsocket(WebSocketData& data, const char* hostname, std::function<void(WStype_t type, uint8_t* payload, size_t length)> cbEvent)
 {
     const CONFIG_T& config = Configuration.get();
+    unsigned long nowMillis = millis();
 
     bool bDelete = data.Host.compare(hostname) != 0; // hostname changed in configuration
     bDelete |= strlen(hostname) == 0; // IP deleted in configuration
@@ -71,13 +74,14 @@ void ShellyClientClass::HandleWebsocket(WebSocketData& data, const char* hostnam
         data.Client->onEvent(cbEvent);
         data.Client->setReconnectInterval(2000);
         data.Host = hostname;
-        data.LastTime = millis();
+        data.LastTime = nowMillis;
     }
 
-    if (data.Connected && (millis() - data.LastTime > data.MaxInterval)) {
-        data.LastTime = millis();
-        // MessageOutput.printf("SEND %s#####\r\n", data.ShellyType == ShellyClientType_t::Pro3EM ? "Pro" : "PlugS");
+    if (data.Connected && (nowMillis - data.LastTime > data.MaxInterval)) {
         data.Client->sendTXT("{\"id\":2, \"src\":\"user_1\", \"method\":\"Shelly.GetStatus\"}");
+
+        std::lock_guard<std::mutex> lock(_mutex);
+        data.LastTime = nowMillis;
     }
 
     if (data.Client != nullptr) {
@@ -106,31 +110,31 @@ void ShellyClientClass::Events(WebSocketData& data, WStype_t type, uint8_t* payl
         MessageOutput.printf("[WSc] Connected to url: %s\r\n", payload);
         data.Connected = true;
         break;
-    case WStype_TEXT:
-        // MessageOutput.printf("[WSc] get text: %s\r\n", payload);
-        {
-            JsonDocument root;
-            const DeserializationError error = deserializeJson(root, payload, length);
-
-            if (error) {
-                MessageOutput.printf("error %s\r\n", payload);
-                return;
+    case WStype_TEXT: {
+        auto ParseDouble = [&](const char* search, double& result) {
+            // e.g. ...ull,"total_act_power":225.658,"total
+            // e.g. ...ue, "apower":0.0, "volta
+            char* key = strstr((char*)payload, search);
+            if (key != nullptr) {
+                key += strlen(search);
+                result = atof(key);
+                return true;
             }
+            return false;
+        };
 
-            if (data.ShellyType == ShellyClientType_t::Pro3EM) {
-                if (ParseJSON(data, root, "params", "em:0", "total_act_power") || // Notify Status
-                    ParseJSON(data, root, "result", "em:0", "total_act_power")) { // Result of manual trigger (Shelly.GetStatus)
-                    _shellyClientData.Update(data.ShellyType, data.LastMeasurement);
-                    SetLimit();
-                }
-            } else {
-                if (ParseJSON(data, root, "result", "switch:0", "apower")) {
-                    _shellyClientData.Update(data.ShellyType, data.LastMeasurement);
-                    SetLimit();
-                }
+        if (data.ShellyType == ShellyClientType_t::Pro3EM) {
+            if (ParseDouble("\"total_act_power\":", data.LastMeasurement)) {
+                _shellyClientData.Update(data.ShellyType, data.LastMeasurement);
+                SetLimit();
+            }
+        } else {
+            if (ParseDouble("\"apower\":", data.LastMeasurement)) {
+                _shellyClientData.Update(data.ShellyType, data.LastMeasurement);
+                SetLimit();
             }
         }
-        break;
+    } break;
     case WStype_BIN:
         MessageOutput.printf("[WSc] get binary length: %u\r\n", length);
         break;
@@ -143,20 +147,9 @@ void ShellyClientClass::Events(WebSocketData& data, WStype_t type, uint8_t* payl
     case WStype_PONG:
         break;
     }
-}
 
-bool ShellyClientClass::ParseJSON(WebSocketData& data, JsonDocument& root, const char* name1, const char* name2, const char* name3)
-{
-    JsonObject n1 = root[name1];
-    if (n1[name2].is<JsonObject>()) {
-        JsonObject n2 = n1[name2];
-        if (n2[name3].is<double_t>()) {
-            data.LastMeasurement = n2[name3];
-            data.LastTime = millis();
-            return true;
-        }
-    }
-    return false;
+    std::lock_guard<std::mutex> lock(_mutex);
+    data.LastTime = millis();
 }
 
 void ShellyClientClass::SetLimit()
@@ -248,8 +241,8 @@ void ShellyClientClass::SetLimit()
         };
     }
 
-    _Pro3EM.MaxInterval = 500;
-    _PlugS.MaxInterval = 500;
+    //_Pro3EM.MaxInterval = 500;
+    //_PlugS.MaxInterval = 500;
 
     if (_shellyClientData.GetMaxValue(ShellyClientType_t::PlugS) < config.Shelly.MinPower) {
         _Pro3EM.MaxInterval = 10000;
@@ -294,6 +287,7 @@ SendLimitResult_t ShellyClientClass::SendLimit(float limit, float generatedPower
             limit = config.Shelly.MaxPower;
         }
     }
+    // TODO remove
     inv->sendActivePowerControlRequest(limit, PowerLimitControlType::AbsolutNonPersistent);
     _shellyClientMqtt.Update(ShellyClientMqttType_t::Limit, limit);
 

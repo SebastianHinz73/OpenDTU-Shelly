@@ -63,7 +63,6 @@ private:
     static void EventsPlugS(WStype_t type, uint8_t* payload, size_t length);
     void Events(WebSocketData& data, WStype_t type, uint8_t* payload, size_t length);
 
-    bool ParseJSON(WebSocketData& data, JsonDocument& root, const char* name1, const char* name2, const char* name3);
     void SetLimit();
     SendLimitResult_t SendLimit(float limit, float generatedPower);
     float IncreaseFactor(float diff);
@@ -72,6 +71,7 @@ private:
     void Debug(float number);
 
 private:
+    std::mutex _mutex;
     Task _loopTask;
     WebSocketData _Pro3EM;
     WebSocketData _PlugS;
