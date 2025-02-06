@@ -371,8 +371,7 @@ void MqttHandleHassClass::addCommonMetadata(
         doc["dev_cla"] = deviceClass_name[device_class];
     }
     if (state_class != STATE_CLS_NONE) {
-        doc["stat_cla"] = stateClass_name[state_class];
-        ;
+        doc["stat_cla"] = stateClass_name[state_class];;
     }
     if (category != CATEGORY_NONE) {
         doc["ent_cat"] = category_name[category];

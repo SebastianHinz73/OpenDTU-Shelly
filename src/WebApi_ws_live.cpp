@@ -13,7 +13,7 @@
 #include <AsyncJson.h>
 
 #ifndef PIN_MAPPING_REQUIRED
-    #define PIN_MAPPING_REQUIRED 0
+#define PIN_MAPPING_REQUIRED 0
 #endif
 
 WebApiWsLiveClass::WebApiWsLiveClass()
@@ -80,30 +80,31 @@ void WebApiWsLiveClass::sendDataTaskCb()
     }
 
     // Loop all inverters
-    for (uint8_t i = 0; i < Hoymiles.getNumInverters() || i < 1; i++) {
+    for (uint8_t i = 0; i < Hoymiles.getNumInverters(); i++) {
         auto inv = Hoymiles.getInverterByPos(i);
-        if (inv != nullptr) {
-            const uint32_t lastUpdateInternal = inv->Statistics()->getLastUpdateFromInternal();
-            if (!((lastUpdateInternal > 0 && lastUpdateInternal > _lastPublishStats[i]) || (millis() - _lastPublishStats[i] > (10 * 1000)))) {
-                continue;
-            }
-            _lastPublishStats[i] = millis();
+        if (inv == nullptr) {
+            continue;
         }
+
+        const uint32_t lastUpdateInternal = inv->Statistics()->getLastUpdateFromInternal();
+        if (!((lastUpdateInternal > 0 && lastUpdateInternal > _lastPublishStats[i]) || (millis() - _lastPublishStats[i] > (10 * 1000)))) {
+            continue;
+        }
+
+        _lastPublishStats[i] = millis();
 
         try {
             std::lock_guard<std::mutex> lock(_mutex);
             JsonDocument root;
             JsonVariant var = root;
 
-            if (inv != nullptr) {
+            auto invArray = var["inverters"].to<JsonArray>();
+            auto invObject = invArray.add<JsonObject>();
 
-                auto invArray = var["inverters"].to<JsonArray>();
-                auto invObject = invArray.add<JsonObject>();
+            generateCommonJsonResponse(var);
+            generateInverterCommonJsonResponse(invObject, inv);
+            generateInverterChannelJsonResponse(invObject, inv);
 
-                generateCommonJsonResponse(var);
-                generateInverterCommonJsonResponse(invObject, inv);
-                generateInverterChannelJsonResponse(invObject, inv);
-            }
             if (true /*ShellyClient.getLastUpdate() < _lastPublishShelly*/) {
                 _lastPublishShelly = millis();
                 generateShellyJsonResponse(var);
@@ -147,7 +148,7 @@ void WebApiWsLiveClass::generateShellyJsonResponse(JsonVariant& root)
     const CONFIG_T& config = Configuration.get();
 
     JsonObject shellyObj = root["shelly"].to<JsonObject>();
-    bool bDay = true;//SunPosition.isDayPeriod();
+    bool bDay = true; // SunPosition.isDayPeriod();
     ShellyClientData& shellyData = ShellyClient.getShellyData();
 
     shellyObj["pro3em_value"] = shellyData.GetActValue(ShellyClientType_t::Pro3EM);
