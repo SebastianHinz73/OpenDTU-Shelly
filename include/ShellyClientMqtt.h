@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
-#include <Arduino.h>
+#include "Configuration.h"
+#include <Hoymiles.h>
+#include <TaskSchedulerDeclarations.h>
+
 #include <map>
 #include <time.h>
 
@@ -13,12 +16,17 @@ enum ShellyClientMqttType_t {
     PlugSTime,
 };
 
-class ShellyClientMqtt {
+class ShellyClientMqttClass {
 public:
-    void Update(ShellyClientMqttType_t id, float value);
-    void Loop();
+    ShellyClientMqttClass();
+    void init(Scheduler& scheduler);
+
+    // void Update(ShellyClientMqttType_t id, float value);
+    void loop();
 
 private:
+    Task _loopTask;
+
     struct data {
         const char* topic;
         int lastUpdateTime;
@@ -27,3 +35,5 @@ private:
     static std::map<ShellyClientMqttType_t, data> _data_map;
     String _Topic;
 };
+
+extern ShellyClientMqttClass ShellyClientMqtt;

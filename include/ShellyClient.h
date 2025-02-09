@@ -24,26 +24,21 @@ public:
     WebSocketData()
         : Host("")
         , Client(nullptr)
-        , LastMeasurement(0)
+        , LastValue(0)
         , LastTime(0)
+        , UpdatedTime(0)
         , ShellyType(ShellyClientType_t::PlugS)
     {
     }
 
     std::string Host;
     WebSocketsClient* Client;
-    double LastMeasurement;
+    double LastValue;
     unsigned long LastTime;
+    unsigned long UpdatedTime;
     bool Connected;
     ShellyClientType_t ShellyType;
     uint32_t MaxInterval;
-};
-
-enum SendLimitResult_t {
-    NoInverter,
-    Similar,
-    CommandPending,
-    SendOk,
 };
 
 class ShellyClientClass {
@@ -52,10 +47,6 @@ public:
     void init(Scheduler& scheduler);
     void loop();
     ShellyClientData& getShellyData() { return _shellyClientData; }
-    float getActLimit() { return _actLimit; }
-    uint32_t getLastUpdate();
-    String getDebug();
-    uint32_t GetPollInterval(ShellyClientType_t type) { return type == ShellyClientType_t::PlugS ? _PlugS.MaxInterval : _Pro3EM.MaxInterval; }
 
 private:
     void HandleWebsocket(WebSocketData& data, const char* hostname, std::function<void(WStype_t type, uint8_t* payload, size_t length)> cbEvent);
@@ -63,24 +54,12 @@ private:
     static void EventsPlugS(WStype_t type, uint8_t* payload, size_t length);
     void Events(WebSocketData& data, WStype_t type, uint8_t* payload, size_t length);
 
-    void SetLimit();
-    SendLimitResult_t SendLimit(float limit, float generatedPower);
-    float IncreaseFactor(float diff);
-    float DecreaseFactor(float diff);
-    void Debug(const char* text);
-    void Debug(float number);
-
 private:
     std::mutex _mutex;
     Task _loopTask;
     WebSocketData _Pro3EM;
     WebSocketData _PlugS;
     ShellyClientData _shellyClientData;
-    ShellyClientMqtt _shellyClientMqtt;
-    unsigned long _lastCommandTrigger;
-    float _actLimit;
-    int _increaseCnt;
-    String _Debug;
 };
 
 extern ShellyClientClass ShellyClient;

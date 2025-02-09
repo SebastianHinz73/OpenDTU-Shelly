@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
-#include <Arduino.h>
+#include <functional>
+
+#include <ctime>
+#include <stdint.h>
 
 enum ShellyClientType_t : uint16_t {
     Pro3EM,
@@ -13,13 +16,12 @@ enum ShellyClientType_t : uint16_t {
 typedef struct
 {
     ShellyClientType_t type;
-    time_t time;
+    time_t time;     // TODO millis kompatibel? unsinged?
     float value;
 } dataEntry_t; // 2 + 4 + 4 => 10 Bytes
 
 typedef struct
 {
-    uint32_t id;
     dataEntry_t* start;
     dataEntry_t* first;
     dataEntry_t* last;
@@ -32,22 +34,17 @@ typedef struct
 
 class RamBuffer {
 public:
-    RamBuffer(uint8_t* buffer, size_t size, uint8_t* cache, size_t cacheSize);
+    RamBuffer(uint8_t* buffer, size_t size);
     void PowerOnInitialize();
-    bool IntegrityCheck();
 
     void writeValue(ShellyClientType_t type, time_t time, float value);
-    bool getEntry(ShellyClientType_t type, time_t time, dataEntry_t*& act);
-
-    size_t getTotalElements() { return _elements; }
-    size_t getUsedElements() { return _header->last >= _header->first ? _header->last - _header->first : _elements; }
+    dataEntry_t* getLastEntry(ShellyClientType_t type);
+    void forAllEntries(ShellyClientType_t type, time_t lastMillis, const std::function<void(dataEntry_t*)>& doDataEntry);
 
 private:
     int toIndex(const dataEntry_t* entry) { return entry - _header->start; }
 
-public:
+private:
     dataEntryHeader_t* _header;
     size_t _elements;
-    uint8_t* _cache;
-    size_t _cacheSize;
 };

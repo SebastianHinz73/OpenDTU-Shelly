@@ -13,12 +13,12 @@ public:
 
     void Update(ShellyClientType_t type, float value);
     float GetActValue(ShellyClientType_t type);
-    float GetMinValue(ShellyClientType_t type);
-    float GetMaxValue(ShellyClientType_t type);
-    float GetFactoredValue(ShellyClientType_t type);
-    void SetLastValue(float value);
-    uint32_t GetUpdateTime(ShellyClientType_t type);
-    uint32_t GetMinMaxTime(ShellyClientType_t type);
+    float GetMinValue(ShellyClientType_t type, time_t lastMillis);
+    float GetMaxValue(ShellyClientType_t type, time_t lastMillis);
+    float GetFactoredValue(ShellyClientType_t type, time_t lastMillis);
+    //void SetLastValue(float value);
+    //uint32_t GetUpdateTime(ShellyClientType_t type);
+    //uint32_t GetMinMaxTime(ShellyClientType_t type);
 
 private:
     /*

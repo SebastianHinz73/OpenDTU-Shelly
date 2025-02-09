@@ -6,11 +6,9 @@
 #include "RamBuffer.h"
 #include "MessageOutput.h"
 
-RamBuffer::RamBuffer(uint8_t* buffer, size_t size, uint8_t* cache, size_t cacheSize)
+RamBuffer::RamBuffer(uint8_t* buffer, size_t size)
     : _header((dataEntryHeader_t*)buffer)
     , _elements((size - sizeof(dataEntryHeader_t)) / sizeof(dataEntry_t))
-    , _cache(cache)
-    , _cacheSize(cacheSize)
 {
     // On reset: _header, _cache and _cacheSize is set. The values in PSRAM are not changes/deleted.
     // On power on: do additional initialisation
@@ -19,55 +17,10 @@ RamBuffer::RamBuffer(uint8_t* buffer, size_t size, uint8_t* cache, size_t cacheS
 
 void RamBuffer::PowerOnInitialize()
 {
-    _header->id = RAMBUFFER_HEADER_ID;
     _header->start = (dataEntry_t*)(&_header[1]);
     _header->first = _header->start;
     _header->last = _header->start;
     _header->end = &_header->start[_elements];
-
-    // PSRAM uses cache which is cleared after reset,
-    if (_cache != nullptr) {
-        memset(_cache, 0, _cacheSize);
-    }
-}
-
-bool RamBuffer::IntegrityCheck()
-{
-    if (_header->id != RAMBUFFER_HEADER_ID) {
-        MessageOutput.printf("RamBuffer 0x%x is not expected id 0x%x\r\n", _header->id, RAMBUFFER_HEADER_ID);
-        return false;
-    }
-
-    if (_elements != _header->end - _header->start) {
-        MessageOutput.println("RamBuffer _elements changed");
-        return false;
-    }
-
-    if (_header->first < _header->start || _header->first > _header->end || _header->last < _header->start || _header->last > _header->end) {
-        MessageOutput.println("RamBuffer first/last out of range");
-        return false;
-    }
-
-    dataEntry_t* act = _header->first;
-
-    for (int i = 0; i < 2; i++) {
-        while (act < _header->end) {
-            if (act == _header->last) {
-                return true;
-            }
-
-            if (act->value < -200 || act->value > 200) {
-                MessageOutput.println("RamBuffer Value out of range");
-                return false;
-            }
-
-            act++;
-        }
-        act = _header->start;
-    }
-
-    MessageOutput.println("RamBuffer unknown error");
-    return false;
 }
 
 void RamBuffer::writeValue(ShellyClientType_t type, time_t time, float value)
@@ -75,7 +28,7 @@ void RamBuffer::writeValue(ShellyClientType_t type, time_t time, float value)
     _header->last->type = type;
     _header->last->time = time;
     _header->last->value = value;
-    // MessageOutput.printf("writeValue: ## %d: 0x%x, (%d, %05.2f)\r\n", toIndex(_header->last), _header->last->serial, _header->last->time, _header->last->value);
+    //MessageOutput.printf("writeValue: ## %d: 0x%x, (%d, %05.2f)\r\n", toIndex(_header->last), _header->last->type, _header->last->time, _header->last->value);
 
     _header->last++;
 
@@ -91,45 +44,59 @@ void RamBuffer::writeValue(ShellyClientType_t type, time_t time, float value)
             _header->first = _header->start;
         }
     }
-
-    if (_cache != nullptr) {
-        // Here _cache is used to read from another PSRAM area and thus trigger a flush of the cache to the PSRAM.
-        uint32_t sum = 0;
-        for (uint32_t i = 0; i < 64 * 1024 / sizeof(uint32_t); i++) {
-            sum += ((uint32_t*)_cache)[i];
-        }
-        // MessageOutput.printf("sum %d\r\n", sum);
-    }
 }
 
-bool RamBuffer::getEntry(ShellyClientType_t type, time_t time, dataEntry_t*& act)
+dataEntry_t* RamBuffer::getLastEntry(ShellyClientType_t type)
 {
-    // start with _header->first, then increment
-    if (act == nullptr) {
-        act = _header->first;
-    } else if (act == _header->last) {
-        return false;
-    } else {
-        act++;
-    }
+    dataEntry_t* act = _header->last;
 
-    for (int i = 0; i < 2; i++) {
-        while (act < _header->end) {
-
-            // end check
-            if (act->time >= time + 24 * 60 * 60 || act == _header->last) {
-                return false;
+    if (_header->last < _header->first) // buffer full
+    {
+        while (act > _header->start) {
+            act--;
+            if (act->type == type) {
+                return act;
             }
-
-            // serial && time check
-            if (type != act->type || act->time < time) {
-                act++;
-                continue;
-            }
-
-            return true;
         }
-        act = _header->start; // start again with _header->start
+        act = _header->end;
     }
-    return false;
+
+    while (act > _header->first) {
+        act--;
+        if (act->type == type) {
+            return act;
+        }
+    }
+    return nullptr;
+}
+
+void RamBuffer::forAllEntries(ShellyClientType_t type, time_t lastMillis, const std::function<void(dataEntry_t*)>& doDataEntry)
+{
+    dataEntry_t* act = _header->last;
+
+    time_t startTime = millis() - lastMillis;
+    startTime = startTime < 0 ? 0 : startTime;
+
+    if (_header->last < _header->first) // buffer full
+    {
+        while (act > _header->start) {
+            act--;
+            if (act->time < startTime) {
+                return;
+            }
+            if (act->type == type) {
+                doDataEntry(act);
+            }
+        }
+        act = _header->end;
+    }
+    while (act > _header->first) {
+        act--;
+        if (act->time < startTime) {
+            return;
+        }
+        if (act->type == type) {
+            doDataEntry(act);
+        }
+    }
 }

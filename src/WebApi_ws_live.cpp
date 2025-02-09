@@ -79,6 +79,42 @@ void WebApiWsLiveClass::sendDataTaskCb()
         return;
     }
 
+    auto generateJsonResponse = [&](std::shared_ptr<InverterAbstract> inv) {
+        try {
+            std::lock_guard<std::mutex> lock(_mutex);
+            JsonDocument root;
+            JsonVariant var = root;
+            generateCommonJsonResponse(var);
+
+            if (inv != nullptr) {
+                auto invArray = var["inverters"].to<JsonArray>();
+                auto invObject = invArray.add<JsonObject>();
+
+                generateInverterCommonJsonResponse(invObject, inv);
+                generateInverterChannelJsonResponse(invObject, inv);
+            }
+
+            if (true /*ShellyClient.getLastUpdate() < _lastPublishShelly*/) {
+                _lastPublishShelly = millis();
+                generateShellyJsonResponse(var);
+            }
+
+            if (!Utils::checkJsonAlloc(root, __FUNCTION__, __LINE__)) {
+                return;
+            }
+
+            String buffer;
+            serializeJson(root, buffer);
+
+            _ws.textAll(buffer);
+
+        } catch (const std::bad_alloc& bad_alloc) {
+            MessageOutput.printf("Call to /api/livedata/status temporarely out of resources. Reason: \"%s\".\r\n", bad_alloc.what());
+        } catch (const std::exception& exc) {
+            MessageOutput.printf("Unknown exception in /api/livedata/status. Reason: \"%s\".\r\n", exc.what());
+        }
+    };
+
     // Loop all inverters
     for (uint8_t i = 0; i < Hoymiles.getNumInverters(); i++) {
         auto inv = Hoymiles.getInverterByPos(i);
@@ -93,36 +129,13 @@ void WebApiWsLiveClass::sendDataTaskCb()
 
         _lastPublishStats[i] = millis();
 
-        try {
-            std::lock_guard<std::mutex> lock(_mutex);
-            JsonDocument root;
-            JsonVariant var = root;
+        generateJsonResponse(inv);
+    }
 
-            auto invArray = var["inverters"].to<JsonArray>();
-            auto invObject = invArray.add<JsonObject>();
+    if (Hoymiles.getNumInverters() == 0) {
 
-            generateCommonJsonResponse(var);
-            generateInverterCommonJsonResponse(invObject, inv);
-            generateInverterChannelJsonResponse(invObject, inv);
-
-            if (true /*ShellyClient.getLastUpdate() < _lastPublishShelly*/) {
-                _lastPublishShelly = millis();
-                generateShellyJsonResponse(var);
-            }
-
-            if (!Utils::checkJsonAlloc(root, __FUNCTION__, __LINE__)) {
-                continue;
-            }
-
-            String buffer;
-            serializeJson(root, buffer);
-
-            _ws.textAll(buffer);
-
-        } catch (const std::bad_alloc& bad_alloc) {
-            MessageOutput.printf("Call to /api/livedata/status temporarely out of resources. Reason: \"%s\".\r\n", bad_alloc.what());
-        } catch (const std::exception& exc) {
-            MessageOutput.printf("Unknown exception in /api/livedata/status. Reason: \"%s\".\r\n", exc.what());
+        if (millis() > _lastPublishShelly + 3000) {
+            generateJsonResponse(nullptr);
         }
     }
 }
@@ -151,33 +164,26 @@ void WebApiWsLiveClass::generateShellyJsonResponse(JsonVariant& root)
     bool bDay = true; // SunPosition.isDayPeriod();
     ShellyClientData& shellyData = ShellyClient.getShellyData();
 
+    float gridPower = shellyData.GetFactoredValue(ShellyClientType_t::Pro3EM, 5000);
+    float generatedPower = shellyData.GetFactoredValue(ShellyClientType_t::PlugS, 5000);
+
     shellyObj["pro3em_value"] = shellyData.GetActValue(ShellyClientType_t::Pro3EM);
     shellyObj["pro3em_enabled"] = config.Shelly.ShellyEnable && bDay;
-    shellyObj["pro3em_debug"] = "[" + String(shellyData.GetFactoredValue(ShellyClientType_t::Pro3EM), 0) + "W, "
-        + String(shellyData.GetMinMaxTime(ShellyClientType_t::Pro3EM) / 1000.0f, 0) + "s: "
-        + String(shellyData.GetMinValue(ShellyClientType_t::Pro3EM), 0) + "W,"
-        + String(shellyData.GetMaxValue(ShellyClientType_t::Pro3EM), 0) + "W] "
-        + String(ShellyClient.GetPollInterval(ShellyClientType_t::Pro3EM) / 1000.0f, 1) + "s";
+    shellyObj["pro3em_debug"] = String(gridPower);
 
     shellyObj["plugs_value"] = shellyData.GetActValue(ShellyClientType_t::PlugS);
     shellyObj["plugs_enabled"] = config.Shelly.ShellyEnable && bDay;
-    shellyObj["plugs_debug"] = "[" + String(shellyData.GetFactoredValue(ShellyClientType_t::PlugS), 0) + "W, "
-        + String(shellyData.GetMinMaxTime(ShellyClientType_t::PlugS) / 1000.0f, 0) + "s: "
-        + String(shellyData.GetMinValue(ShellyClientType_t::PlugS), 0) + "W,"
-        + String(shellyData.GetMaxValue(ShellyClientType_t::PlugS), 0) + "W] "
-        + String(ShellyClient.GetPollInterval(ShellyClientType_t::PlugS) / 1000.0f, 1) + "s";
+    shellyObj["plugs_debug"] = String(generatedPower);
 
     shellyObj["combined_value"] = shellyData.GetActValue(ShellyClientType_t::Combined);
     shellyObj["combined_enabled"] = config.Shelly.ShellyEnable && bDay;
-    shellyObj["combined_debug"] = "[" + String(shellyData.GetMinMaxTime(ShellyClientType_t::Combined) / 1000.0f, 0) + "s: "
-        + String(shellyData.GetMinValue(ShellyClientType_t::Combined), 0) + "W,"
-        + String(shellyData.GetMaxValue(ShellyClientType_t::Combined), 0) + "W]";
+    shellyObj["combined_debug"] = "[...]";
 
-    shellyObj["limit_value"] = ShellyClient.getActLimit();
+    shellyObj["limit_value"] = 0; // ShellyClient.getActLimit();
     shellyObj["limit_enabled"] = config.Shelly.ShellyEnable && config.Shelly.LimitEnable && bDay;
     shellyObj["debug_enabled"] = config.Shelly.DebugEnable;
     shellyObj["moreinfo_enabled"] = config.Shelly.ShellyEnable && config.Shelly.ShellyMoreInfoEnable;
-    shellyObj["debug"] = ShellyClient.getDebug();
+    shellyObj["debug"] = "debug"; // ShellyClient.getDebug();
 }
 
 void WebApiWsLiveClass::generateInverterCommonJsonResponse(JsonObject& root, std::shared_ptr<InverterAbstract> inv)
