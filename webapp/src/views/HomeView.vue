@@ -10,6 +10,7 @@
         <HintView :hints="liveData.hints" />
         <InverterTotalInfo :totalData="liveData.total" /><br />
         <ShellyInfo :shellyData="liveData.shelly" :totalData="liveData.total" v-if="liveData.shelly.pro3em_enabled || liveData.shelly.plugs_enabled || liveData.shelly.limit_enabled"/><br />
+        <ShellyChart/>
         <div class="btn-group" role="group">
                 <button type="button" class="btn btn-primary" :onClick="buttonClick">
                     {{ $t('console.ClearConsole') }}
@@ -517,6 +518,7 @@ import HintView from '@/components/HintView.vue';
 import InverterChannelInfo from '@/components/InverterChannelInfo.vue';
 import InverterTotalInfo from '@/components/InverterTotalInfo.vue';
 import ShellyInfo from '@/components/ShellyInfo.vue';
+import ShellyChart from '@/components/ShellyChart.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
 import type { DevInfoStatus } from '@/types/DevInfoStatus';
 import type { EventlogItems } from '@/types/EventlogStatus';
@@ -552,6 +554,7 @@ export default defineComponent({
         InverterChannelInfo,
         InverterTotalInfo,
         ShellyInfo,
+        ShellyChart,
         ModalDialog,
         BIconArrowCounterclockwise,
         BIconBroadcast,

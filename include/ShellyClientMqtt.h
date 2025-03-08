@@ -8,7 +8,7 @@
 #include <map>
 #include <time.h>
 
-enum ShellyClientMqttType_t {
+enum class ShellyClientMqttType_t {
     Limit,
     Pro3EMPower,
     Pro3EMTime,

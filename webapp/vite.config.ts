@@ -15,6 +15,7 @@ try {
   // eslint-disable-next-line
   proxy_target = require('./vite.user.ts').proxy_target;
 } catch {
+  proxy_target = '192.168.178.37';
   proxy_target = '192.168.178.26';
 }
 

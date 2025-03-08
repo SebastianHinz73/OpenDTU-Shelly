@@ -11,7 +11,7 @@
 
 ShellyClientData::ShellyClientData()
 {
-    int ramDiskSize = 4096;
+    int ramDiskSize = 4096; // 7 * 60 Sekunden * 10 Bytes = 4200
     uint8_t* ramDisk = new uint8_t[ramDiskSize];
 
     _ramBuffer = new RamBuffer(ramDisk, ramDiskSize);
@@ -24,14 +24,14 @@ ShellyClientData::~ShellyClientData()
     delete _ramBuffer;
 }
 
-void ShellyClientData::Update(ShellyClientType_t type, float value)
+void ShellyClientData::Update(RamDataType_t type, float value)
 {
     std::lock_guard<std::mutex> lock(_mutex);
 
     _ramBuffer->writeValue(type, millis(), value);
 }
 
-float ShellyClientData::GetActValue(ShellyClientType_t type)
+float ShellyClientData::GetActValue(RamDataType_t type)
 {
     std::lock_guard<std::mutex> lock(_mutex);
 
@@ -39,39 +39,40 @@ float ShellyClientData::GetActValue(ShellyClientType_t type)
     return e != nullptr ? e->value : 0.0;
 }
 
-float ShellyClientData::GetMinValue(ShellyClientType_t type, time_t lastMillis)
+float ShellyClientData::GetMinValue(RamDataType_t type, time_t lastMillis)
 {
     std::lock_guard<std::mutex> lock(_mutex);
 
     float min = FLT_MAX;
-    _ramBuffer->forAllEntries(type, lastMillis, [&](dataEntry_t* entry) {
+    _ramBuffer->forAllEntriesReverse(type, lastMillis, [&](dataEntry_t* entry) {
         if (entry->value < min) {
             min = entry->value;
         }
     });
-    return min == FLT_MAX ? 0 : min;
+    return (min == FLT_MAX) ? 0 : min;
 }
 
-float ShellyClientData::GetMaxValue(ShellyClientType_t type, time_t lastMillis)
+float ShellyClientData::GetMaxValue(RamDataType_t type, time_t lastMillis)
 {
     std::lock_guard<std::mutex> lock(_mutex);
 
-    float max = FLT_MIN;
-    _ramBuffer->forAllEntries(type, lastMillis, [&](dataEntry_t* entry) {
+    float max = -FLT_MAX;
+
+    _ramBuffer->forAllEntriesReverse(type, lastMillis, [&](dataEntry_t* entry) {
         if (entry->value > max) {
             max = entry->value;
         }
     });
-    return max == FLT_MIN ? 0 : max;
+    return (max == -FLT_MAX) ? 0 : max;
 }
 
-float ShellyClientData::GetFactoredValue(ShellyClientType_t type, time_t lastMillis)
+float ShellyClientData::GetFactoredValue(RamDataType_t type, time_t lastMillis)
 {
     std::lock_guard<std::mutex> lock(_mutex);
 
     float min = FLT_MAX;
-    float max = FLT_MIN;
-    _ramBuffer->forAllEntries(type, lastMillis, [&](dataEntry_t* entry) {
+    float max = -FLT_MAX;
+    _ramBuffer->forAllEntriesReverse(type, lastMillis, [&](dataEntry_t* entry) {
         if (entry->value < min) {
             min = entry->value;
         }
@@ -79,43 +80,33 @@ float ShellyClientData::GetFactoredValue(ShellyClientType_t type, time_t lastMil
             max = entry->value;
         }
     });
-    
+
     min = min == FLT_MAX ? 0 : min;
-    max = max == FLT_MIN ? 0 : max;
-    
+    max = max == -FLT_MAX ? 0 : max;
+
     const CONFIG_T& config = Configuration.get();
 
     float factor = static_cast<float>(config.Shelly.FeedInLevel) / 100.0;
-    if (type == ShellyClientType_t::PlugS) {
+    if (type == RamDataType_t::PlugS) {
         factor = 1.0 - factor;
     }
     return min + (max - min) * factor;
 }
 
-#if 0
-void ShellyClientData::SetLastValue(float value)
+void ShellyClientData::GetLastData(RamDataType_t type, time_t lastMillis, String& result)
 {
     std::lock_guard<std::mutex> lock(_mutex);
-    /*
-     if (_Pro3EM.values.size() > 0) {
-         _Pro3EM.values.shift();
-         _Pro3EM.values.unshift(value);
 
-         CalculateMinMax(_Pro3EM);
-     }*/
+    int cnt = 0;
+    result = "[ ";
+    _ramBuffer->forAllEntries(type, lastMillis, [&](dataEntry_t* entry) {
+        if (cnt == 0) {
+            cnt++;
+        } else {
+            result += String(",");
+        }
+        result += String("{\"x\": ") + static_cast<float>(entry->time) / TASK_SECOND + String(",\"y\": ") + entry->value + String("}");
+    });
+    result += " ]";
 }
 
-uint32_t ShellyClientData::GetUpdateTime(ShellyClientType_t type)
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    return 0;
-    // return GetData(type).lastChangedTime;
-}
-
-uint32_t ShellyClientData::GetMinMaxTime(ShellyClientType_t type)
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    return 0;
-    // return GetData(type).minMaxTime;
-}
-#endif

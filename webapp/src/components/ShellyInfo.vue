@@ -64,11 +64,8 @@ export default defineComponent({
         shellyData: { type: Object as PropType<Shelly>, required: true },
         totalData: { type: Object as PropType<Total>, required: true },
     },
-    methods: {
-        buttonClick() {
-            //this.consoleBuffer = '';
-        },
-
-    },
-});
+    
+    
+    
+    });
 </script>

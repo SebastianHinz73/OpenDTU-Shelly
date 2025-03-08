@@ -23,12 +23,12 @@ void RamBuffer::PowerOnInitialize()
     _header->end = &_header->start[_elements];
 }
 
-void RamBuffer::writeValue(ShellyClientType_t type, time_t time, float value)
+void RamBuffer::writeValue(RamDataType_t type, time_t time, float value)
 {
     _header->last->type = type;
     _header->last->time = time;
     _header->last->value = value;
-    //MessageOutput.printf("writeValue: ## %d: 0x%x, (%d, %05.2f)\r\n", toIndex(_header->last), _header->last->type, _header->last->time, _header->last->value);
+    // MessageOutput.printf("writeValue: ## %d: 0x%x, (%d, %05.2f)\r\n", toIndex(_header->last), _header->last->type, _header->last->time, _header->last->value);
 
     _header->last++;
 
@@ -46,7 +46,7 @@ void RamBuffer::writeValue(ShellyClientType_t type, time_t time, float value)
     }
 }
 
-dataEntry_t* RamBuffer::getLastEntry(ShellyClientType_t type)
+dataEntry_t* RamBuffer::getLastEntry(RamDataType_t type)
 {
     dataEntry_t* act = _header->last;
 
@@ -70,7 +70,7 @@ dataEntry_t* RamBuffer::getLastEntry(ShellyClientType_t type)
     return nullptr;
 }
 
-void RamBuffer::forAllEntries(ShellyClientType_t type, time_t lastMillis, const std::function<void(dataEntry_t*)>& doDataEntry)
+void RamBuffer::forAllEntriesReverse(RamDataType_t type, time_t lastMillis, const std::function<void(dataEntry_t*)>& doDataEntry)
 {
     dataEntry_t* act = _header->last;
 
@@ -99,4 +99,61 @@ void RamBuffer::forAllEntries(ShellyClientType_t type, time_t lastMillis, const 
             doDataEntry(act);
         }
     }
+}
+
+void RamBuffer::forAllEntries(RamDataType_t type, time_t lastMillis, const std::function<void(dataEntry_t*)>& doDataEntry)
+{
+    dataEntry_t* act = toStartEntry(type, lastMillis);
+    if (act == nullptr) {
+        return;
+    }
+
+    for (int i = 0; i < 2; i++) {
+        while (act < _header->end) {
+            // end check
+            if (act == _header->last) {
+                return;
+            }
+
+            // type check
+            if (type == act->type) {
+                doDataEntry(act);
+            }
+            act++;
+        }
+        act = _header->start; // start again with _header->start
+    }
+}
+
+dataEntry_t* RamBuffer::toStartEntry(RamDataType_t type, time_t lastMillis)
+{
+    time_t startTime = millis() - lastMillis;
+
+    dataEntry_t* act = _header->last;
+    dataEntry_t* found = nullptr;
+
+    if (_header->last < _header->first) // buffer full
+    {
+        while (act > _header->start) {
+            act--;
+            if (act->time < startTime) {
+                return found;
+            }
+            if (act->type == type) {
+                found = act;
+            }
+        }
+        act = _header->end;
+    }
+    while (act > _header->first) {
+        act--;
+        if (act->time < startTime) {
+            return found;
+        }
+        if (act->type == type) {
+            found = act;
+        }
+    }
+
+    return found;
 }

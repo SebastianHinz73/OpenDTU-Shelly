@@ -6,17 +6,23 @@
 #include <ctime>
 #include <stdint.h>
 
-enum ShellyClientType_t : uint16_t {
+enum class RamDataType_t : uint16_t {
     Pro3EM,
+    Pro3EM_Min,
+    Pro3EM_Max,
     PlugS,
-    Combined,
+    PlugS_Min,
+    PlugS_Max,
+    CalulatedLimit,
+    Limit,
+    MAX,
 };
 
 #pragma pack(2)
 typedef struct
 {
-    ShellyClientType_t type;
-    time_t time;     // TODO millis kompatibel? unsinged?
+    RamDataType_t type;
+    time_t time; // TODO millis kompatibel? unsinged?
     float value;
 } dataEntry_t; // 2 + 4 + 4 => 10 Bytes
 
@@ -37,12 +43,14 @@ public:
     RamBuffer(uint8_t* buffer, size_t size);
     void PowerOnInitialize();
 
-    void writeValue(ShellyClientType_t type, time_t time, float value);
-    dataEntry_t* getLastEntry(ShellyClientType_t type);
-    void forAllEntries(ShellyClientType_t type, time_t lastMillis, const std::function<void(dataEntry_t*)>& doDataEntry);
+    void writeValue(RamDataType_t type, time_t time, float value);
+    dataEntry_t* getLastEntry(RamDataType_t type);
+    void forAllEntriesReverse(RamDataType_t type, time_t lastMillis, const std::function<void(dataEntry_t*)>& doDataEntry);
+    void forAllEntries(RamDataType_t type, time_t lastMillis, const std::function<void(dataEntry_t*)>& doDataEntry);
 
 private:
     int toIndex(const dataEntry_t* entry) { return entry - _header->start; }
+    dataEntry_t* toStartEntry(RamDataType_t type, time_t lastMillis);
 
 private:
     dataEntryHeader_t* _header;

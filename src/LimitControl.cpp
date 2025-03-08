@@ -15,8 +15,8 @@ LimitControlClass::LimitControlClass()
     , _shellyClientData(ShellyClient.getShellyData())
     , _invLimitAbsolute(0)
 {
-    _intervalPro3em = 5000;
-    _intervalPlugS = 5000;
+    _intervalPro3em = 20000;
+    _intervalPlugS = 20000;
 }
 
 void LimitControlClass::init(Scheduler& scheduler)
@@ -27,19 +27,31 @@ void LimitControlClass::init(Scheduler& scheduler)
 
 void LimitControlClass::loop()
 {
+    float value = _shellyClientData.GetMaxValue(RamDataType_t::Pro3EM, _intervalPro3em);
+    _shellyClientData.Update(RamDataType_t::Pro3EM_Max, value);
+
+    value = _shellyClientData.GetMinValue(RamDataType_t::Pro3EM, _intervalPro3em);
+    _shellyClientData.Update(RamDataType_t::Pro3EM_Min, value);
+
+    value = _shellyClientData.GetMaxValue(RamDataType_t::PlugS, _intervalPro3em);
+    _shellyClientData.Update(RamDataType_t::PlugS_Max, value);
+
+    value = _shellyClientData.GetMinValue(RamDataType_t::PlugS, _intervalPro3em);
+    _shellyClientData.Update(RamDataType_t::PlugS_Min, value);
+
     const CONFIG_T& config = Configuration.get();
     if (!(config.Shelly.ShellyEnable && config.Shelly.LimitEnable)) {
-        _intervalPro3em = 5000;
-        _intervalPlugS = 5000;
+        _intervalPro3em = 20000; // 5000;
+        _intervalPlugS = 20000; // 5000;
         return;
     }
 
+#if 0
     if (millis() - _lastLimitSend < 10 * TASK_SECOND) {
         return;
     }
     _lastLimitSend = millis();
 
-#if 0
     // TODO MQTT funktioniert, hier nicht Frontend nicht
     for (uint8_t i = 0; i < Hoymiles.getNumInverters(); i++) {
         auto inv = Hoymiles.getInverterByPos(i);
@@ -63,99 +75,60 @@ void LimitControlClass::CalculateLimit()
 {
     const CONFIG_T& config = Configuration.get();
 
-    float gridPower = _shellyClientData.GetFactoredValue(ShellyClientType_t::Pro3EM, _intervalPro3em);
-    float generatedPower = _shellyClientData.GetFactoredValue(ShellyClientType_t::PlugS, _intervalPlugS);
+    float gridPower = _shellyClientData.GetFactoredValue(RamDataType_t::Pro3EM, _intervalPro3em);
+    float generatedPower = _shellyClientData.GetFactoredValue(RamDataType_t::PlugS, _intervalPlugS);
     MessageOutput.printf("LimitControlClass::LimitControlClass grid:%f, generatedPower:%f \r\n", gridPower, generatedPower);
 
-    /*
-    _shellyClientMqtt.Update(ShellyClientMqttType_t::Pro3EMPower, gridPower);
-    _shellyClientMqtt.Update(ShellyClientMqttType_t::Pro3EMTime, _shellyClientData.GetMinMaxTime(ShellyClientType_t::Pro3EM) / 1000);
-    _shellyClientMqtt.Update(ShellyClientMqttType_t::PlugSPower, generatedPower);
-    _shellyClientMqtt.Update(ShellyClientMqttType_t::PlugSTime, _shellyClientData.GetMinMaxTime(ShellyClientType_t::PlugS) / 1000);
-*/
-    float limit = FLT_MIN;
-    float border = 5;
+    float limit = -FLT_MAX;
+    float border = 10;
 
     if (gridPower > config.Shelly.TargetValue + border) {
         // increase: iterate to limit
         limit = abs(gridPower - config.Shelly.TargetValue);
         limit *= 0.75; // IncreaseFactor(limit);
         limit += _actLimit;
-        limit = static_cast<int>(limit + 0.5) + 0.1;
 
-        // Debug("i");
+        MessageOutput.printf("increase %f\r\n", limit);
+
     } else if (gridPower < config.Shelly.TargetValue - border - 50) {
         // decrease: set new limit
-        //_increaseCnt = 0;
-        /// limit = abs(static_cast<int32_t>(config.Shelly.MinPower) - config.Shelly.TargetValue);
         limit = generatedPower - abs(gridPower - config.Shelly.TargetValue) * 0.9f;
-
-        limit = static_cast<int>(limit + 0.5) - 0.5;
-
-        //_shellyClientData.SetLastValue(config.Shelly.TargetValue);
+        MessageOutput.printf("decrease full %f\r\n", limit);
 
         // Debug("D");
     } else if (gridPower < config.Shelly.TargetValue - border) {
         // decrease: set new limit
-        //_increaseCnt = 0;
-        /*if (abs(gridPower - generatedPower) > 50) {
-            limit = generatedPower - abs(gridPower - config.Shelly.TargetValue) * 0.9f;
-            limit = static_cast<int>(limit + 0.5) - 0.2;
-        } else*/
-        {
-            limit = abs(gridPower - config.Shelly.TargetValue);
-            limit *= 0.8; // DecreaseFactor(limit);
-            limit = _actLimit - limit;
-            limit = static_cast<int>(limit + 0.5) - 0.1;
-        }
+
+        limit = abs(gridPower - config.Shelly.TargetValue);
+        limit *= 0.8; // DecreaseFactor(limit);
+        limit = _actLimit - limit;
+
+        MessageOutput.printf("decrease  %f\r\n", limit);
+
         // border = min(1, 2);
         //_shellyClientData.SetLastValue(config.Shelly.TargetValue - border);
         // Debug("d");
-    } else {
-        //_increaseCnt = 0;
-        // Debug("e");
     }
 
-    MessageOutput.printf("LimitControlClass::LimitControlClass %f \r\n", limit);
-    return;
+    _shellyClientData.Update(RamDataType_t::Limit, _actLimit);
 
-    if (limit != FLT_MIN) {
+    if (limit == -FLT_MAX) {
+        return;
+    }
+
+    _shellyClientData.Update(RamDataType_t::CalulatedLimit, limit);
+    MessageOutput.printf("LimitControlClass::LimitControlClass %f, %f\r\n", limit, limit + gridPower);
+
+    if (millis() - _lastLimitSend < 10 * TASK_SECOND) {
+        return;
+    }
+    /*
         bool increase = limit > _actLimit;
-        /*if (_increaseCnt > 5) {
+        if (_increaseCnt > 5) {
             limit = config.Shelly.MaxPower;
         }*/
 
-        SendLimitResult_t result = SendLimit(limit, generatedPower);
-        switch (result) {
-        case SendLimitResult_t::NoInverter:
-            // Debug("N");
-            break;
-        case SendLimitResult_t::SendOk:
-            // Debug(limit);
-            // Debug("S");
-            if (increase) {
-                //_increaseCnt++;
-            }
-            break;
-        case SendLimitResult_t::CommandPending:
-            // Debug("T");
-            break;
-        case SendLimitResult_t::Similar:
-            // Debug("~");
-            break;
-        default:
-            break;
-        };
-    }
-
-    //_Pro3EM.MaxInterval = 500;
-    //_PlugS.MaxInterval = 500;
-
-    /*
-    if (_shellyClientData.GetMaxValue(ShellyClientType_t::PlugS) < config.Shelly.MinPower) {
-        _Pro3EM.MaxInterval = 10000;
-        _PlugS.MaxInterval = 10000;
-    }*/
+    /*SendLimitResult_t result =*/SendLimit(limit, generatedPower);
 }
 
 SendLimitResult_t LimitControlClass::SendLimit(float limit, float generatedPower)
@@ -190,6 +163,7 @@ SendLimitResult_t LimitControlClass::SendLimit(float limit, float generatedPower
     }
     inv->sendActivePowerControlRequest(limit, PowerLimitControlType::AbsolutNonPersistent);
     _lastLimitSend = millis();
+    _shellyClientData.Update(RamDataType_t::Limit, limit);
 
     return SendLimitResult_t::SendOk;
 }
@@ -235,8 +209,8 @@ float ShellyClientClass::DecreaseFactor(float diff)
 
 uint32_t ShellyClientClass::getLastUpdate()
 {
-    uint32_t pro = _shellyClientData.GetUpdateTime(ShellyClientType_t::Pro3EM);
-    uint32_t plugs = _shellyClientData.GetUpdateTime(ShellyClientType_t::PlugS);
+    uint32_t pro = _shellyClientData.GetUpdateTime(RamDataType_t::Pro3EM);
+    uint32_t plugs = _shellyClientData.GetUpdateTime(RamDataType_t::PlugS);
 
     return pro > plugs ? pro : plugs;
 }

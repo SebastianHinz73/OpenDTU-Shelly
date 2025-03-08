@@ -34,6 +34,7 @@ void WebApiWsLiveClass::init(AsyncWebServer& server, Scheduler& scheduler)
     using std::placeholders::_6;
 
     server.on("/api/livedata/status", HTTP_GET, std::bind(&WebApiWsLiveClass::onLivedataStatus, this, _1));
+    server.on("/api/livedata/graph", HTTP_GET, std::bind(&WebApiWsLiveClass::onGraphUpdate, this, _1));
 
     server.addHandler(&_ws);
     _ws.onEvent(std::bind(&WebApiWsLiveClass::onWebsocketEvent, this, _1, _2, _3, _4, _5, _6));
@@ -164,22 +165,18 @@ void WebApiWsLiveClass::generateShellyJsonResponse(JsonVariant& root)
     bool bDay = true; // SunPosition.isDayPeriod();
     ShellyClientData& shellyData = ShellyClient.getShellyData();
 
-    float gridPower = shellyData.GetFactoredValue(ShellyClientType_t::Pro3EM, 5000);
-    float generatedPower = shellyData.GetFactoredValue(ShellyClientType_t::PlugS, 5000);
+    float gridPower = shellyData.GetFactoredValue(RamDataType_t::Pro3EM, 5000);
+    float generatedPower = shellyData.GetFactoredValue(RamDataType_t::PlugS, 5000);
 
-    shellyObj["pro3em_value"] = shellyData.GetActValue(ShellyClientType_t::Pro3EM);
+    shellyObj["pro3em_value"] = shellyData.GetActValue(RamDataType_t::Pro3EM);
     shellyObj["pro3em_enabled"] = config.Shelly.ShellyEnable && bDay;
     shellyObj["pro3em_debug"] = String(gridPower);
 
-    shellyObj["plugs_value"] = shellyData.GetActValue(ShellyClientType_t::PlugS);
+    shellyObj["plugs_value"] = shellyData.GetActValue(RamDataType_t::PlugS);
     shellyObj["plugs_enabled"] = config.Shelly.ShellyEnable && bDay;
     shellyObj["plugs_debug"] = String(generatedPower);
 
-    shellyObj["combined_value"] = shellyData.GetActValue(ShellyClientType_t::Combined);
-    shellyObj["combined_enabled"] = config.Shelly.ShellyEnable && bDay;
-    shellyObj["combined_debug"] = "[...]";
-
-    shellyObj["limit_value"] = 0; // ShellyClient.getActLimit();
+    shellyObj["limit_value"] = shellyData.GetActValue(RamDataType_t::Limit);
     shellyObj["limit_enabled"] = config.Shelly.ShellyEnable && config.Shelly.LimitEnable && bDay;
     shellyObj["debug_enabled"] = config.Shelly.DebugEnable;
     shellyObj["moreinfo_enabled"] = config.Shelly.ShellyEnable && config.Shelly.ShellyMoreInfoEnable;
@@ -353,6 +350,140 @@ void WebApiWsLiveClass::onLivedataStatus(AsyncWebServerRequest* request)
         WebApi.sendTooManyRequests(request);
     } catch (const std::exception& exc) {
         MessageOutput.printf("Unknown exception in /api/livedata/status. Reason: \"%s\".\r\n", exc.what());
+        WebApi.sendTooManyRequests(request);
+    }
+}
+
+void WebApiWsLiveClass::generateDiagramJsonResponse(JsonVariant& root, String name, const RamDataType_t* types, int size)
+{
+    auto singleGraphArray = root[name].to<JsonArray>();
+
+    for (int i = 0; i < size; i++) {
+        auto singleGraphObject = singleGraphArray.add<JsonObject>();
+
+        const char* name = "";
+        const char* label = "";
+        const char* color = "";
+        switch (types[i]) {
+        case RamDataType_t::Pro3EM:
+            name = "data_pro3em";
+            label = "Pro3em";
+            color = "#ff0000";
+            break;
+        case RamDataType_t::Pro3EM_Min:
+            name = "data_pro3em_min";
+            label = "Min";
+            color = "#c8c8c8";
+            break;
+        case RamDataType_t::Pro3EM_Max:
+            name = "data_pro3em_max";
+            label = "Max";
+            color = "#646464";
+            break;
+
+        case RamDataType_t::PlugS:
+            name = "data_plugs";
+            label = "PlugS";
+            color = "#0000FF";
+            break;
+        case RamDataType_t::PlugS_Min:
+            name = "data_plugs_min";
+            label = "Min";
+            color = "#c8c8c8";
+            break;
+        case RamDataType_t::PlugS_Max:
+            name = "data_plugs_max";
+            label = "Max";
+            color = "#646464";
+            break;
+
+        case RamDataType_t::CalulatedLimit:
+            name = "data_calculated_limit";
+            label = "Calc Limit";
+            color = "#00FF00";
+            break;
+        case RamDataType_t::Limit:
+            name = "data_limit";
+            label = "Limit";
+            color = "#00aa00";
+            break;
+
+        default:
+            break;
+        };
+
+        singleGraphObject["data_name"] = name;
+        singleGraphObject["label"] = label;
+        singleGraphObject["color"] = color;
+    }
+}
+
+void WebApiWsLiveClass::onGraphUpdate(AsyncWebServerRequest* request)
+{
+    if (!WebApi.checkCredentialsReadonly(request)) {
+        return;
+    }
+
+    try {
+        std::lock_guard<std::mutex> lock(_mutex);
+
+        AsyncJsonResponse* response = new AsyncJsonResponse();
+        auto& root = response->getRoot();
+
+        ShellyClientData& shellyData = ShellyClient.getShellyData();
+
+        long long timestamp = 0;
+        if (request->hasParam("timestamp")) {
+            String s = request->getParam("timestamp")->value();
+            timestamp = strtoll(s.c_str(), NULL, 10);
+        }
+
+        uint32_t interval = 2 * TASK_SECOND;
+        if (timestamp == 0) {
+            interval = 60 * TASK_SECOND;
+        }
+
+        root["timestamp"] = timestamp + interval;
+        root["interval"] = interval;
+
+        String data;
+        shellyData.GetLastData(RamDataType_t::Pro3EM, interval, data);
+        root["data_pro3em"] = data;
+        shellyData.GetLastData(RamDataType_t::Pro3EM_Min, interval, data);
+        root["data_pro3em_min"] = data;
+        shellyData.GetLastData(RamDataType_t::Pro3EM_Max, interval, data);
+        root["data_pro3em_max"] = data;
+
+        shellyData.GetLastData(RamDataType_t::PlugS, interval, data);
+        root["data_plugs"] = data;
+        shellyData.GetLastData(RamDataType_t::PlugS_Min, interval, data);
+        root["data_plugs_min"] = data;
+        shellyData.GetLastData(RamDataType_t::PlugS_Max, interval, data);
+        root["data_plugs_max"] = data;
+        shellyData.GetLastData(RamDataType_t::CalulatedLimit, interval, data);
+        root["data_calculated_limit"] = data;
+        shellyData.GetLastData(RamDataType_t::Limit, interval, data);
+        root["data_limit"] = data;
+
+        const RamDataType_t a[] = { RamDataType_t::Pro3EM, RamDataType_t::Pro3EM_Min, RamDataType_t::Pro3EM_Max };
+        generateDiagramJsonResponse(root, "diagram_pro3em", a, 3);
+
+        const RamDataType_t b[] = { RamDataType_t::PlugS, RamDataType_t::PlugS_Min, RamDataType_t::PlugS_Max };
+        generateDiagramJsonResponse(root, "diagram_plugs", b, 3);
+
+        const RamDataType_t c[] = { RamDataType_t::CalulatedLimit, RamDataType_t::Limit };
+        generateDiagramJsonResponse(root, "diagram_limit", c, 2);
+
+        const RamDataType_t d[] = { RamDataType_t::Pro3EM, RamDataType_t::PlugS, RamDataType_t::Limit };
+        generateDiagramJsonResponse(root, "diagram_all", d, 3);
+
+        WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
+
+    } catch (const std::bad_alloc& bad_alloc) {
+        MessageOutput.printf("Call to /api/livedata/graph temporarely out of resources. Reason: \"%s\".\r\n", bad_alloc.what());
+        WebApi.sendTooManyRequests(request);
+    } catch (const std::exception& exc) {
+        MessageOutput.printf("Unknown exception in /api/livedata/graph. Reason: \"%s\".\r\n", exc.what());
         WebApi.sendTooManyRequests(request);
     }
 }

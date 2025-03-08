@@ -68,14 +68,13 @@ export interface Shelly {
     plugs_value: number;
     plugs_enabled: boolean;
     plugs_debug: string;
-    combined_value: number;
-    combined_enabled: boolean;
-    combined_debug: string;
     limit_value: number;
     limit_enabled: boolean;
     moreinfo_enabled: boolean;
     debug_enabled: boolean;
     debug: string;
+    graphPro3em: string;
+    graphPlugS: string;
 }
 
 export interface LiveData {

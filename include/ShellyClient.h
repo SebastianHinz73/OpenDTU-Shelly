@@ -27,7 +27,7 @@ public:
         , LastValue(0)
         , LastTime(0)
         , UpdatedTime(0)
-        , ShellyType(ShellyClientType_t::PlugS)
+        , ShellyType(RamDataType_t::PlugS)
     {
     }
 
@@ -37,7 +37,7 @@ public:
     unsigned long LastTime;
     unsigned long UpdatedTime;
     bool Connected;
-    ShellyClientType_t ShellyType;
+    RamDataType_t ShellyType;
     uint32_t MaxInterval;
 };
 

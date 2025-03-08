@@ -23,9 +23,9 @@ void ShellyClientClass::init(Scheduler& scheduler)
     scheduler.addTask(_loopTask);
     _loopTask.enable();
 
-    _Pro3EM.ShellyType = ShellyClientType_t::Pro3EM;
+    _Pro3EM.ShellyType = RamDataType_t::Pro3EM;
     _Pro3EM.MaxInterval = 5000;
-    _PlugS.ShellyType = ShellyClientType_t::PlugS;
+    _PlugS.ShellyType = RamDataType_t::PlugS;
     _PlugS.MaxInterval = 5000;
 }
 
@@ -126,7 +126,7 @@ void ShellyClientClass::Events(WebSocketData& data, WStype_t type, uint8_t* payl
             return false;
         };
 
-        if (data.ShellyType == ShellyClientType_t::Pro3EM) {
+        if (data.ShellyType == RamDataType_t::Pro3EM) {
             if (ParseDouble("\"total_act_power\":", data.LastValue)) {
                 _shellyClientData.Update(data.ShellyType, data.LastValue);
             }
