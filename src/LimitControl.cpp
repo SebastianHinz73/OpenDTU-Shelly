@@ -217,7 +217,7 @@ uint32_t ShellyClientClass::getLastUpdate()
 
 void ShellyClientClass::Debug(const char* text)
 {
-    if (Configuration.get().Shelly.DebugEnable) {
+    if (Configuration.get().Shelly.ViewOption >= 0) { // TODO
         if (_Debug.length() > 80) {
             _Debug.clear();
         }
@@ -228,7 +228,7 @@ void ShellyClientClass::Debug(const char* text)
 
 void ShellyClientClass::Debug(float number)
 {
-    if (Configuration.get().Shelly.DebugEnable) {
+    if (Configuration.get().Shelly.ViewOption >= 0) { // TODO
         _Debug += String(number, 0);
     }
 }

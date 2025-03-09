@@ -106,16 +106,15 @@ bool ConfigurationClass::write()
 
     JsonObject shelly = doc["shelly"].to<JsonObject>();
     shelly["shelly_enable"] = config.Shelly.ShellyEnable;
-    shelly["shelly_moreinfo_enable"] = config.Shelly.ShellyMoreInfoEnable;
     shelly["shelly_hostname_pro3em"] = config.Shelly.Hostname_Pro3EM;
     shelly["shelly_hostname_plugs"] = config.Shelly.Hostname_PlugS;
     shelly["limit_enable"] = config.Shelly.LimitEnable;
     shelly["max_power"] = config.Shelly.MaxPower;
     shelly["min_power"] = config.Shelly.MinPower;
     shelly["target_value"] = config.Shelly.TargetValue;
-    shelly["debug_enable"] = config.Shelly.DebugEnable;
     shelly["feed_in_level"] = config.Shelly.FeedInLevel;
-
+    shelly["view_option"] = config.Shelly.ViewOption;
+    
     JsonObject security = doc["security"].to<JsonObject>();
     security["password"] = config.Security.Password;
     security["allow_readonly"] = config.Security.AllowReadonly;
@@ -294,16 +293,15 @@ bool ConfigurationClass::read()
 
     JsonObject shelly = doc["shelly"];
     config.Shelly.ShellyEnable = shelly["shelly_enable"] | SHELLY_ENABLE;
-    config.Shelly.ShellyMoreInfoEnable = shelly["shelly_moreinfo_enable"] | SHELLY_MOREINFO_ENABLE;
     strlcpy(config.Shelly.Hostname_Pro3EM, shelly["shelly_hostname_pro3em"] | SHELLY_HOST, sizeof(config.Shelly.Hostname_Pro3EM));
     strlcpy(config.Shelly.Hostname_PlugS, shelly["shelly_hostname_plugs"] | SHELLY_HOST, sizeof(config.Shelly.Hostname_PlugS));
     config.Shelly.LimitEnable = shelly["limit_enable"] | SHELLY_LIMIT_ENABLE;
     config.Shelly.MaxPower = shelly["max_power"] | SHELLY_MAX_POWER;
     config.Shelly.MinPower = shelly["min_power"] | SHELLY_MIN_POWER;
     config.Shelly.TargetValue = shelly["target_value"] | SHELLY_TARGET_VALUE;
-    config.Shelly.DebugEnable = shelly["debug_enable"] | SHELLY_DEBUG_ENABLE;
     config.Shelly.FeedInLevel = shelly["feed_in_level"] | SHELLY_FEED_IN_LEVEL;
-
+    config.Shelly.ViewOption = shelly["view_option"] | SHELLY_VIEW_OPTION;
+    
     JsonObject security = doc["security"];
     strlcpy(config.Security.Password, security["password"] | ACCESS_POINT_PASSWORD, sizeof(config.Security.Password));
     config.Security.AllowReadonly = security["allow_readonly"] | SECURITY_ALLOW_READONLY;

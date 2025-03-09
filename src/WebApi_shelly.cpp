@@ -33,15 +33,14 @@ void WebApiShellyClass::onShellyAdminGet(AsyncWebServerRequest* request)
     const CONFIG_T& config = Configuration.get();
 
     root["shelly_enable"] = config.Shelly.ShellyEnable;
-    root["shelly_moreinfo_enable"] = config.Shelly.ShellyMoreInfoEnable;
     root["shelly_hostname_pro3em"] = config.Shelly.Hostname_Pro3EM;
     root["shelly_hostname_plugs"] = config.Shelly.Hostname_PlugS;
     root["limit_enable"] = config.Shelly.LimitEnable;
     root["max_power"] = config.Shelly.MaxPower;
     root["min_power"] = config.Shelly.MinPower;
     root["target_value"] = config.Shelly.TargetValue;
-    root["debug_enable"] = config.Shelly.DebugEnable;
     root["feed_in_level"] = config.Shelly.FeedInLevel;
+    root["view_option"] = config.Shelly.ViewOption;
 
     response->setLength();
     request->send(response);
@@ -85,7 +84,7 @@ void WebApiShellyClass::onShellyAdminPost(AsyncWebServerRequest* request)
             && root["max_power"].is<uint32_t>()
             && root["min_power"].is<uint32_t>()
             && root["target_value"].is<int32_t>()
-            && root["debug_enable"].is<bool>())) {
+            && root["view_option"].is<uint32_t>())) {
         retMsg["message"] = "Values are missing!";
         retMsg["code"] = WebApiError::GenericValueMissing;
         response->setLength();
@@ -147,15 +146,14 @@ void WebApiShellyClass::onShellyAdminPost(AsyncWebServerRequest* request)
         auto& config = guard.getConfig();
 
         config.Shelly.ShellyEnable = root["shelly_enable"].as<bool>();
-        config.Shelly.ShellyMoreInfoEnable = root["shelly_moreinfo_enable"].as<bool>();
         strlcpy(config.Shelly.Hostname_Pro3EM, root["shelly_hostname_pro3em"].as<String>().c_str(), sizeof(config.Shelly.Hostname_Pro3EM));
         strlcpy(config.Shelly.Hostname_PlugS, root["shelly_hostname_plugs"].as<String>().c_str(), sizeof(config.Shelly.Hostname_PlugS));
         config.Shelly.LimitEnable = root["limit_enable"].as<bool>();
         config.Shelly.MaxPower = root["max_power"].as<uint32_t>();
         config.Shelly.MinPower = root["min_power"].as<uint32_t>();
         config.Shelly.TargetValue = root["target_value"].as<int32_t>();
-        config.Shelly.DebugEnable = root["debug_enable"].as<bool>();
         config.Shelly.FeedInLevel = root["feed_in_level"].as<uint32_t>();
+        config.Shelly.ViewOption = root["view_option"].as<uint32_t>();
     }
     WebApi.writeConfig(retMsg);
 

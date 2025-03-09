@@ -61,25 +61,8 @@ export interface Hints {
     pin_mapping_issue: boolean;
 }
 
-export interface Shelly {
-    pro3em_value: number;
-    pro3em_enabled: boolean;
-    pro3em_debug: string;
-    plugs_value: number;
-    plugs_enabled: boolean;
-    plugs_debug: string;
-    limit_value: number;
-    limit_enabled: boolean;
-    moreinfo_enabled: boolean;
-    debug_enabled: boolean;
-    debug: string;
-    graphPro3em: string;
-    graphPlugS: string;
-}
-
 export interface LiveData {
     inverters: Inverter[];
     total: Total;
     hints: Hints;
-    shelly: Shelly;
 }

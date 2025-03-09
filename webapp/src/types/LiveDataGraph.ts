@@ -1,3 +1,5 @@
+import type { ValueObject } from "./LiveDataStatus";
+
 export const validDataNames = {
     data_pro3em: 1,
     data_pro3em_min: 2,
@@ -16,9 +18,23 @@ export interface SingleGraph {
     color: string;
 }
 
+export interface ShellyCard {
+    pro3em_value: number;
+    pro3em_debug: string;
+    plugs_value: number;
+    plugs_debug: string;
+    limit_value: number;
+    limit_debug: string;
+
+    Power: ValueObject;
+}
+
 export interface LiveDataGraph {
+    view_option: number;
     timestamp: string;
     interval: number;
+
+    cards: ShellyCard;
 
     diagram_pro3em: SingleGraph[];
     diagram_plugs: SingleGraph[];

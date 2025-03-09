@@ -142,15 +142,14 @@ struct CONFIG_T {
 
     struct {
         bool ShellyEnable;
-        bool ShellyMoreInfoEnable;
         char Hostname_Pro3EM[SHELLY_MAX_HOSTNAME_STRLEN + 1];
         char Hostname_PlugS[SHELLY_MAX_HOSTNAME_STRLEN + 1];
         bool LimitEnable;
         uint32_t MaxPower;
         uint32_t MinPower;
         int32_t TargetValue;
-        bool DebugEnable;
         uint32_t FeedInLevel;
+        uint32_t ViewOption;
     } Shelly;
 
     struct {

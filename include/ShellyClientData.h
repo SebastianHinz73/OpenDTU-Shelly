@@ -5,8 +5,6 @@
 #include <Arduino.h>
 #include <mutex>
 
-#define LAST_DATA_ENTRIES 40
-
 class ShellyClientData {
 public:
     ShellyClientData();
@@ -17,7 +15,7 @@ public:
     float GetMinValue(RamDataType_t type, time_t lastMillis);
     float GetMaxValue(RamDataType_t type, time_t lastMillis);
     float GetFactoredValue(RamDataType_t type, time_t lastMillis);
-    void GetLastData(RamDataType_t type, time_t lastMillis, String& result);
+    String& GetLastData(RamDataType_t type, time_t lastMillis, String& result);
 
 private:
     std::mutex _mutex;

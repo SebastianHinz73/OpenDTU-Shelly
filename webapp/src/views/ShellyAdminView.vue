@@ -18,9 +18,13 @@
                     type="text" maxlength="128" :placeholder="$t('shellyadmin.HostnameHint')"
                     v-show="shellyConfigList.shelly_enable" />
 
-                <InputElement :label="$t('shellyadmin.ShellyMoreInfoSwitch')"
-                    v-model="shellyConfigList.shelly_moreinfo_enable" type="checkbox"
-                    v-show="shellyConfigList.shelly_enable" />
+                <InputElement :label="$t('shellyadmin.ShellyMoreInfoSwitch')" type="noinput">
+                    <select class="form-select" v-model="shellyConfigList.view_option">
+                        <option v-for="option in viewOptionList" :key="option.name" :value="option.name">
+                            {{ option.descr }}
+                        </option>
+                    </select>
+                </InputElement>             
             </CardElement>
 
             <CardElement :text="$t('shellyadmin.ShellySet')" textVariant="text-bg-primary" add-space
@@ -28,9 +32,6 @@
 
                 <InputElement :label="$t('shellyadmin.ShellySetSwitch')" v-model="shellyConfigList.limit_enable"
                     type="checkbox" v-show="shellyConfigList.shelly_enable" />
-
-                <InputElement :label="$t('shellyadmin.ShellyDebugSwitch')" v-model="shellyConfigList.debug_enable"
-                    type="checkbox" v-show="shellyConfigList.shelly_enable && shellyConfigList.limit_enable" />
 
                 <InputElement :label="$t('shellyadmin.MaxPower')" v-model="shellyConfigList.max_power" type="number"
                     min="1" max="3000" :placeholder="$t('shellyadmin.MaxPowerHint')"
@@ -91,6 +92,26 @@ export default defineComponent({
             alertMessage: "",
             alertType: "info",
             showAlert: false,
+
+            viewOptionList: [
+                {
+                    name: 0,
+                    descr: 'No Shelly info',
+                },
+                {
+                    name: 1,
+                    descr: 'Simple Shelly info',
+                },
+                {
+                    name: 2,
+                    descr: 'Shelly and diagram info',
+                },
+                {
+                    name: 3,
+                    descr: 'Complete Shelly info',
+                },
+            ],
+
         };
     },
     created() {

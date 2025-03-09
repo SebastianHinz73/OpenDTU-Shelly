@@ -93,7 +93,7 @@ float ShellyClientData::GetFactoredValue(RamDataType_t type, time_t lastMillis)
     return min + (max - min) * factor;
 }
 
-void ShellyClientData::GetLastData(RamDataType_t type, time_t lastMillis, String& result)
+String& ShellyClientData::GetLastData(RamDataType_t type, time_t lastMillis, String& result)
 {
     std::lock_guard<std::mutex> lock(_mutex);
 
@@ -108,5 +108,6 @@ void ShellyClientData::GetLastData(RamDataType_t type, time_t lastMillis, String
         result += String("{\"x\": ") + static_cast<float>(entry->time) / TASK_SECOND + String(",\"y\": ") + entry->value + String("}");
     });
     result += " ]";
-}
 
+    return result;
+}

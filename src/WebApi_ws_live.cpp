@@ -95,11 +95,6 @@ void WebApiWsLiveClass::sendDataTaskCb()
                 generateInverterChannelJsonResponse(invObject, inv);
             }
 
-            if (true /*ShellyClient.getLastUpdate() < _lastPublishShelly*/) {
-                _lastPublishShelly = millis();
-                generateShellyJsonResponse(var);
-            }
-
             if (!Utils::checkJsonAlloc(root, __FUNCTION__, __LINE__)) {
                 return;
             }
@@ -157,30 +152,25 @@ void WebApiWsLiveClass::generateCommonJsonResponse(JsonVariant& root)
     hintObj["pin_mapping_issue"] = PIN_MAPPING_REQUIRED && !PinMapping.isMappingSelected();
 }
 
-void WebApiWsLiveClass::generateShellyJsonResponse(JsonVariant& root)
+void WebApiWsLiveClass::generateShellyCardJsonResponse(JsonVariant& root, ShellyViewOptions viewOptions)
 {
-    const CONFIG_T& config = Configuration.get();
-
-    JsonObject shellyObj = root["shelly"].to<JsonObject>();
-    bool bDay = true; // SunPosition.isDayPeriod();
+    JsonObject shellyCards = root["cards"].to<JsonObject>();
     ShellyClientData& shellyData = ShellyClient.getShellyData();
 
     float gridPower = shellyData.GetFactoredValue(RamDataType_t::Pro3EM, 5000);
     float generatedPower = shellyData.GetFactoredValue(RamDataType_t::PlugS, 5000);
 
-    shellyObj["pro3em_value"] = shellyData.GetActValue(RamDataType_t::Pro3EM);
-    shellyObj["pro3em_enabled"] = config.Shelly.ShellyEnable && bDay;
-    shellyObj["pro3em_debug"] = String(gridPower);
+    shellyCards["pro3em_value"] = shellyData.GetActValue(RamDataType_t::Pro3EM);
+    shellyCards["plugs_value"] = shellyData.GetActValue(RamDataType_t::PlugS);
+    shellyCards["limit_value"] = shellyData.GetActValue(RamDataType_t::Limit);
 
-    shellyObj["plugs_value"] = shellyData.GetActValue(RamDataType_t::PlugS);
-    shellyObj["plugs_enabled"] = config.Shelly.ShellyEnable && bDay;
-    shellyObj["plugs_debug"] = String(generatedPower);
+    if (viewOptions >= ShellyViewOptions::CompleteInfo) {
+        shellyCards["pro3em_debug"] = String(gridPower);
+        shellyCards["plugs_debug"] = String(generatedPower);
+        shellyCards["limit_debug"] = String(generatedPower);
+    }
 
-    shellyObj["limit_value"] = shellyData.GetActValue(RamDataType_t::Limit);
-    shellyObj["limit_enabled"] = config.Shelly.ShellyEnable && config.Shelly.LimitEnable && bDay;
-    shellyObj["debug_enabled"] = config.Shelly.DebugEnable;
-    shellyObj["moreinfo_enabled"] = config.Shelly.ShellyEnable && config.Shelly.ShellyMoreInfoEnable;
-    shellyObj["debug"] = "debug"; // ShellyClient.getDebug();
+    addTotalField(shellyCards, "Power", Datastore.getTotalAcPowerEnabled(), "W", Datastore.getTotalAcPowerDigits());
 }
 
 void WebApiWsLiveClass::generateInverterCommonJsonResponse(JsonObject& root, std::shared_ptr<InverterAbstract> inv)
@@ -341,7 +331,6 @@ void WebApiWsLiveClass::onLivedataStatus(AsyncWebServerRequest* request)
         }
 
         generateCommonJsonResponse(root);
-        generateShellyJsonResponse(root);
 
         WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
 
@@ -430,55 +419,59 @@ void WebApiWsLiveClass::onGraphUpdate(AsyncWebServerRequest* request)
         AsyncJsonResponse* response = new AsyncJsonResponse();
         auto& root = response->getRoot();
 
+        const CONFIG_T& config = Configuration.get();
         ShellyClientData& shellyData = ShellyClient.getShellyData();
 
-        long long timestamp = 0;
-        if (request->hasParam("timestamp")) {
-            String s = request->getParam("timestamp")->value();
-            timestamp = strtoll(s.c_str(), NULL, 10);
+        ShellyViewOptions viewOptions = static_cast<ShellyViewOptions>(config.Shelly.ViewOption);
+        if (viewOptions >= ShellyViewOptions::SimpleInfo) {
+            root["view_option"] = config.Shelly.ViewOption;
+
+            generateShellyCardJsonResponse(root, viewOptions);
+
+            long long timestamp = 0;
+            uint32_t interval = 2 * TASK_SECOND;
+
+            if (request->hasParam("timestamp")) {
+                String s = request->getParam("timestamp")->value();
+
+                timestamp = strtoll(s.c_str(), NULL, 10);
+                if (timestamp == 0) {
+                    interval = 60 * TASK_SECOND;
+                }
+            }
+
+            root["timestamp"] = timestamp + interval;
+            root["interval"] = interval;
+
+            if (viewOptions >= ShellyViewOptions::DiagramInfo) {
+                String data;
+
+                root["data_pro3em"] = shellyData.GetLastData(RamDataType_t::Pro3EM, interval, data);
+                root["data_pro3em_min"] = shellyData.GetLastData(RamDataType_t::Pro3EM_Min, interval, data);
+                root["data_pro3em_max"] = shellyData.GetLastData(RamDataType_t::Pro3EM_Max, interval, data);
+
+                root["data_plugs"] = shellyData.GetLastData(RamDataType_t::PlugS, interval, data);
+                root["data_plugs_min"] = shellyData.GetLastData(RamDataType_t::PlugS_Min, interval, data);
+                root["data_plugs_max"] = shellyData.GetLastData(RamDataType_t::PlugS_Max, interval, data);
+
+                root["data_calculated_limit"] = shellyData.GetLastData(RamDataType_t::CalulatedLimit, interval, data);
+                root["data_limit"] = shellyData.GetLastData(RamDataType_t::Limit, interval, data);
+
+                const RamDataType_t a[] = { RamDataType_t::Pro3EM, RamDataType_t::Pro3EM_Min, RamDataType_t::Pro3EM_Max };
+                generateDiagramJsonResponse(root, "diagram_pro3em", a, 3);
+
+                const RamDataType_t b[] = { RamDataType_t::PlugS, RamDataType_t::PlugS_Min, RamDataType_t::PlugS_Max };
+                generateDiagramJsonResponse(root, "diagram_plugs", b, 3);
+
+                const RamDataType_t c[] = { RamDataType_t::CalulatedLimit, RamDataType_t::Limit };
+                generateDiagramJsonResponse(root, "diagram_limit", c, 2);
+
+                const RamDataType_t d[] = { RamDataType_t::Pro3EM, RamDataType_t::PlugS, RamDataType_t::Limit };
+                generateDiagramJsonResponse(root, "diagram_all", d, 3);
+            }
         }
-
-        uint32_t interval = 2 * TASK_SECOND;
-        if (timestamp == 0) {
-            interval = 60 * TASK_SECOND;
-        }
-
-        root["timestamp"] = timestamp + interval;
-        root["interval"] = interval;
-
-        String data;
-        shellyData.GetLastData(RamDataType_t::Pro3EM, interval, data);
-        root["data_pro3em"] = data;
-        shellyData.GetLastData(RamDataType_t::Pro3EM_Min, interval, data);
-        root["data_pro3em_min"] = data;
-        shellyData.GetLastData(RamDataType_t::Pro3EM_Max, interval, data);
-        root["data_pro3em_max"] = data;
-
-        shellyData.GetLastData(RamDataType_t::PlugS, interval, data);
-        root["data_plugs"] = data;
-        shellyData.GetLastData(RamDataType_t::PlugS_Min, interval, data);
-        root["data_plugs_min"] = data;
-        shellyData.GetLastData(RamDataType_t::PlugS_Max, interval, data);
-        root["data_plugs_max"] = data;
-        shellyData.GetLastData(RamDataType_t::CalulatedLimit, interval, data);
-        root["data_calculated_limit"] = data;
-        shellyData.GetLastData(RamDataType_t::Limit, interval, data);
-        root["data_limit"] = data;
-
-        const RamDataType_t a[] = { RamDataType_t::Pro3EM, RamDataType_t::Pro3EM_Min, RamDataType_t::Pro3EM_Max };
-        generateDiagramJsonResponse(root, "diagram_pro3em", a, 3);
-
-        const RamDataType_t b[] = { RamDataType_t::PlugS, RamDataType_t::PlugS_Min, RamDataType_t::PlugS_Max };
-        generateDiagramJsonResponse(root, "diagram_plugs", b, 3);
-
-        const RamDataType_t c[] = { RamDataType_t::CalulatedLimit, RamDataType_t::Limit };
-        generateDiagramJsonResponse(root, "diagram_limit", c, 2);
-
-        const RamDataType_t d[] = { RamDataType_t::Pro3EM, RamDataType_t::PlugS, RamDataType_t::Limit };
-        generateDiagramJsonResponse(root, "diagram_all", d, 3);
 
         WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
-
     } catch (const std::bad_alloc& bad_alloc) {
         MessageOutput.printf("Call to /api/livedata/graph temporarely out of resources. Reason: \"%s\".\r\n", bad_alloc.what());
         WebApi.sendTooManyRequests(request);

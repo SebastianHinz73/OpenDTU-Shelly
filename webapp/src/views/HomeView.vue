@@ -9,13 +9,7 @@
     >
         <HintView :hints="liveData.hints" />
         <InverterTotalInfo :totalData="liveData.total" /><br />
-        <ShellyInfo :shellyData="liveData.shelly" :totalData="liveData.total" v-if="liveData.shelly.pro3em_enabled || liveData.shelly.plugs_enabled || liveData.shelly.limit_enabled"/><br />
         <ShellyChart/>
-        <div class="btn-group" role="group">
-                <button type="button" class="btn btn-primary" :onClick="buttonClick">
-                    {{ $t('console.ClearConsole') }}
-                </button>
-            </div>
         <div class="row gy-3">
             <div class="col-sm-3 col-md-2" :style="[inverterData.length == 1 ? { display: 'none' } : {}]">
                 <div
@@ -517,7 +511,6 @@ import GridProfile from '@/components/GridProfile.vue';
 import HintView from '@/components/HintView.vue';
 import InverterChannelInfo from '@/components/InverterChannelInfo.vue';
 import InverterTotalInfo from '@/components/InverterTotalInfo.vue';
-import ShellyInfo from '@/components/ShellyInfo.vue';
 import ShellyChart from '@/components/ShellyChart.vue';
 import ModalDialog from '@/components/ModalDialog.vue';
 import type { DevInfoStatus } from '@/types/DevInfoStatus';
@@ -553,7 +546,6 @@ export default defineComponent({
         HintView,
         InverterChannelInfo,
         InverterTotalInfo,
-        ShellyInfo,
         ShellyChart,
         ModalDialog,
         BIconArrowCounterclockwise,
@@ -637,17 +629,14 @@ export default defineComponent({
         this.closeSocket();
     },
     updated() {
-        console.log('Updated');
         // Select first tab
         if (this.isFirstFetchAfterConnect) {
-            console.log('isFirstFetchAfterConnect');
-
             this.$nextTick(() => {
-                console.log('nextTick');
+                //console.log('nextTick');
                 const firstTabEl = document.querySelector('#v-pills-tab:first-child button');
                 if (firstTabEl != null) {
                     this.isFirstFetchAfterConnect = false;
-                    console.log('Show');
+                    //console.log('Show');
                     const firstTab = new bootstrap.Tab(firstTabEl);
                     firstTab.show();
                 }
@@ -710,7 +699,6 @@ export default defineComponent({
                 if (event.data != '{}') {
                     const newData = JSON.parse(event.data);
                     Object.assign(this.liveData.total, newData.total);
-                    Object.assign(this.liveData.shelly, newData.shelly);
                     Object.assign(this.liveData.hints, newData.hints);
 
                     const foundIdx = this.liveData.inverters.findIndex(
@@ -946,11 +934,6 @@ export default defineComponent({
                 return '-';
             }
             return this.$n(val_small / val_large, 'percent');
-        },
-        buttonClick() {
-            console.log('Send');
-            console.log(JSON.stringify(this.liveData.shelly));
-            this.socket.send(JSON.stringify(this.liveData.shelly));
         },
     },
 });

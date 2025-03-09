@@ -8,7 +8,10 @@
             <BIconInfoCircle v-if="tooltip !== undefined" v-tooltip :title="tooltip" />
         </label>
         <div :class="[wide ? 'col-sm-8' : 'col-sm-10']">
-            <div v-if="!isTextarea" :class="{ 'form-check form-switch': isCheckbox, 'input-group': postfix || prefix }">
+            <div v-if="isNoInput">
+                <slot />
+            </div>
+            <div v-else-if="!isTextarea" :class="{ 'form-check form-switch': isCheckbox, 'input-group': postfix || prefix }">
                 <span v-if="prefix" class="input-group-text" :id="descriptionId">
                     {{ prefix }}
                 </span>
@@ -104,6 +107,9 @@ export default defineComponent({
         },
         isCheckbox() {
             return this.type === 'checkbox';
+        },
+        isNoInput() {
+            return this.type === 'noinput';
         },
     },
 });
