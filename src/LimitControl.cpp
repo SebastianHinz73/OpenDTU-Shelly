@@ -52,7 +52,7 @@ void LimitControlClass::loop()
     }
     _lastLimitSend = millis();
 
-    // TODO MQTT funktioniert, hier nicht Frontend nicht
+    // TODO(shi) MQTT funktioniert, hier nicht Frontend nicht
     for (uint8_t i = 0; i < Hoymiles.getNumInverters(); i++) {
         auto inv = Hoymiles.getInverterByPos(i);
         if (inv == nullptr) {
@@ -217,7 +217,7 @@ uint32_t ShellyClientClass::getLastUpdate()
 
 void ShellyClientClass::Debug(const char* text)
 {
-    if (Configuration.get().Shelly.ViewOption >= 0) { // TODO
+    if (Configuration.get().Shelly.ViewOption >= 0) { // TODO(shi)
         if (_Debug.length() > 80) {
             _Debug.clear();
         }
@@ -228,7 +228,7 @@ void ShellyClientClass::Debug(const char* text)
 
 void ShellyClientClass::Debug(float number)
 {
-    if (Configuration.get().Shelly.ViewOption >= 0) { // TODO
+    if (Configuration.get().Shelly.ViewOption >= 0) { // TODO(shi)
         _Debug += String(number, 0);
     }
 }

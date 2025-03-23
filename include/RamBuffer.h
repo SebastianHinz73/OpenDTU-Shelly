@@ -22,7 +22,7 @@ enum class RamDataType_t : uint16_t {
 typedef struct
 {
     RamDataType_t type;
-    time_t time; // TODO millis kompatibel? unsinged?
+    time_t time; // TODO(shi) millis kompatibel? unsinged?
     float value;
 } dataEntry_t; // 2 + 4 + 4 => 10 Bytes
 

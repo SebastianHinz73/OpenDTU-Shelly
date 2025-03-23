@@ -117,7 +117,7 @@ void ShellyClientClass::Events(WebSocketData& data, WStype_t type, uint8_t* payl
         auto ParseDouble = [&](const char* search, double& result) {
             // e.g. ...ull,"total_act_power":225.658,"total
             // e.g. ...ue, "apower":0.0, "volta
-            char* key = strstr((char*)payload, search);
+            char* key = strstr(reinterpret_cast<char*>(payload), search);
             if (key != nullptr) {
                 key += strlen(search);
                 result = atof(key);

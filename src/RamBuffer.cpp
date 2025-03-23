@@ -7,7 +7,7 @@
 #include "MessageOutput.h"
 
 RamBuffer::RamBuffer(uint8_t* buffer, size_t size)
-    : _header((dataEntryHeader_t*)buffer)
+    : _header(reinterpret_cast<dataEntryHeader_t*>(buffer))
     , _elements((size - sizeof(dataEntryHeader_t)) / sizeof(dataEntry_t))
 {
     // On reset: _header, _cache and _cacheSize is set. The values in PSRAM are not changes/deleted.
@@ -17,7 +17,7 @@ RamBuffer::RamBuffer(uint8_t* buffer, size_t size)
 
 void RamBuffer::PowerOnInitialize()
 {
-    _header->start = (dataEntry_t*)(&_header[1]);
+    _header->start = reinterpret_cast<dataEntry_t*>(&_header[1]);
     _header->first = _header->start;
     _header->last = _header->start;
     _header->end = &_header->start[_elements];

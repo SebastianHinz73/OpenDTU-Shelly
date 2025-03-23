@@ -58,7 +58,7 @@ void ShellyClientMqttClass::loop()
     }
 
 #if 0
-    // TODO
+    // TODO(shi)
     
     // initialize _Topic
     if (_Topic.isEmpty()) {

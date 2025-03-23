@@ -20,7 +20,7 @@ ShellyClientData::ShellyClientData()
 
 ShellyClientData::~ShellyClientData()
 {
-    // TODO change RamBuffer
+    // TODO(shi) change RamBuffer
     delete _ramBuffer;
 }
 
