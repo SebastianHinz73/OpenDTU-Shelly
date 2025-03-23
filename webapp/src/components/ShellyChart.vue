@@ -1,6 +1,6 @@
 <template>
 <div class="row row-cols-1 row-cols-md-3 g-3">
-  <div class="col" v-if="liveData.view_option > 0 && data.data_pro3em.length > 0">
+  <div class="col" v-if="liveData.view_option > 0">
     <CardElement centerContent textVariant="text-bg-success" :text="$t('shellyadmin.ShellyPro3em')">
       <h2>
         {{
@@ -20,7 +20,7 @@
     </CardElement>
   </div>
 
-  <div class="col" v-if="liveData.view_option > 0 && data.data_plugs.length > 0">
+  <div class="col" v-if="liveData.view_option > 0">
     <CardElement centerContent textVariant="text-bg-success" :text="$t('shellyadmin.ShellyPlugS')">
       <h2>
         {{
@@ -40,7 +40,7 @@
     </CardElement>
   </div>
 
-  <div class="col" v-if="liveData.view_option > 0 && data.data_limit.length > 0">
+  <div class="col" v-if="liveData.view_option > 0">
     <CardElement centerContent textVariant="text-bg-success" :text="$t('home.CurrentLimit')">
       <h2>
         {{
