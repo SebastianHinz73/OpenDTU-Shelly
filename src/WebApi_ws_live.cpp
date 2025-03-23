@@ -5,17 +5,20 @@
 #include "WebApi_ws_live.h"
 #include "Datastore.h"
 #include "MessageOutput.h"
+#include "ShellyClient.h"
+#include "SunPosition.h"
 #include "Utils.h"
 #include "WebApi.h"
 #include "defaults.h"
 #include <AsyncJson.h>
 
 #ifndef PIN_MAPPING_REQUIRED
-    #define PIN_MAPPING_REQUIRED 0
+#define PIN_MAPPING_REQUIRED 0
 #endif
 
 WebApiWsLiveClass::WebApiWsLiveClass()
     : _ws("/livedata")
+    , _lastPublishShelly(0)
     , _wsCleanupTask(1 * TASK_SECOND, TASK_FOREVER, std::bind(&WebApiWsLiveClass::wsCleanupTaskCb, this))
     , _sendDataTask(1 * TASK_SECOND, TASK_FOREVER, std::bind(&WebApiWsLiveClass::sendDataTaskCb, this))
 {
@@ -31,6 +34,7 @@ void WebApiWsLiveClass::init(AsyncWebServer& server, Scheduler& scheduler)
     using std::placeholders::_6;
 
     server.on("/api/livedata/status", HTTP_GET, std::bind(&WebApiWsLiveClass::onLivedataStatus, this, _1));
+    server.on("/api/livedata/graph", HTTP_GET, std::bind(&WebApiWsLiveClass::onGraphUpdate, this, _1));
 
     server.addHandler(&_ws);
     _ws.onEvent(std::bind(&WebApiWsLiveClass::onWebsocketEvent, this, _1, _2, _3, _4, _5, _6));
@@ -52,7 +56,9 @@ void WebApiWsLiveClass::reload()
 
     auto const& config = Configuration.get();
 
-    if (config.Security.AllowReadonly) { return; }
+    if (config.Security.AllowReadonly) {
+        return;
+    }
 
     _ws.enable(false);
     _simpleDigestAuth.setPassword(config.Security.Password);
@@ -74,6 +80,37 @@ void WebApiWsLiveClass::sendDataTaskCb()
         return;
     }
 
+    auto generateJsonResponse = [&](std::shared_ptr<InverterAbstract> inv) {
+        try {
+            std::lock_guard<std::mutex> lock(_mutex);
+            JsonDocument root;
+            JsonVariant var = root;
+            generateCommonJsonResponse(var);
+
+            if (inv != nullptr) {
+                auto invArray = var["inverters"].to<JsonArray>();
+                auto invObject = invArray.add<JsonObject>();
+
+                generateInverterCommonJsonResponse(invObject, inv);
+                generateInverterChannelJsonResponse(invObject, inv);
+            }
+
+            if (!Utils::checkJsonAlloc(root, __FUNCTION__, __LINE__)) {
+                return;
+            }
+
+            String buffer;
+            serializeJson(root, buffer);
+
+            _ws.textAll(buffer);
+
+        } catch (const std::bad_alloc& bad_alloc) {
+            MessageOutput.printf("Call to /api/livedata/status temporarely out of resources. Reason: \"%s\".\r\n", bad_alloc.what());
+        } catch (const std::exception& exc) {
+            MessageOutput.printf("Unknown exception in /api/livedata/status. Reason: \"%s\".\r\n", exc.what());
+        }
+    };
+
     // Loop all inverters
     for (uint8_t i = 0; i < Hoymiles.getNumInverters(); i++) {
         auto inv = Hoymiles.getInverterByPos(i);
@@ -88,31 +125,13 @@ void WebApiWsLiveClass::sendDataTaskCb()
 
         _lastPublishStats[i] = millis();
 
-        try {
-            std::lock_guard<std::mutex> lock(_mutex);
-            JsonDocument root;
-            JsonVariant var = root;
+        generateJsonResponse(inv);
+    }
 
-            auto invArray = var["inverters"].to<JsonArray>();
-            auto invObject = invArray.add<JsonObject>();
+    if (Hoymiles.getNumInverters() == 0) {
 
-            generateCommonJsonResponse(var);
-            generateInverterCommonJsonResponse(invObject, inv);
-            generateInverterChannelJsonResponse(invObject, inv);
-
-            if (!Utils::checkJsonAlloc(root, __FUNCTION__, __LINE__)) {
-                continue;
-            }
-
-            String buffer;
-            serializeJson(root, buffer);
-
-            _ws.textAll(buffer);
-
-        } catch (const std::bad_alloc& bad_alloc) {
-            MessageOutput.printf("Call to /api/livedata/status temporarely out of resources. Reason: \"%s\".\r\n", bad_alloc.what());
-        } catch (const std::exception& exc) {
-            MessageOutput.printf("Unknown exception in /api/livedata/status. Reason: \"%s\".\r\n", exc.what());
+        if (millis() > _lastPublishShelly + 3000) {
+            generateJsonResponse(nullptr);
         }
     }
 }
@@ -131,6 +150,27 @@ void WebApiWsLiveClass::generateCommonJsonResponse(JsonVariant& root)
     hintObj["default_password"] = strcmp(Configuration.get().Security.Password, ACCESS_POINT_PASSWORD) == 0;
 
     hintObj["pin_mapping_issue"] = PIN_MAPPING_REQUIRED && !PinMapping.isMappingSelected();
+}
+
+void WebApiWsLiveClass::generateShellyCardJsonResponse(JsonVariant& root, ShellyViewOptions viewOptions)
+{
+    JsonObject shellyCards = root["cards"].to<JsonObject>();
+    ShellyClientData& shellyData = ShellyClient.getShellyData();
+
+    float gridPower = shellyData.GetFactoredValue(RamDataType_t::Pro3EM, 5000);
+    float generatedPower = shellyData.GetFactoredValue(RamDataType_t::PlugS, 5000);
+
+    shellyCards["pro3em_value"] = shellyData.GetActValue(RamDataType_t::Pro3EM);
+    shellyCards["plugs_value"] = shellyData.GetActValue(RamDataType_t::PlugS);
+    shellyCards["limit_value"] = shellyData.GetActValue(RamDataType_t::Limit);
+
+    if (viewOptions >= ShellyViewOptions::CompleteInfo) {
+        shellyCards["pro3em_debug"] = String(gridPower);
+        shellyCards["plugs_debug"] = String(generatedPower);
+        shellyCards["limit_debug"] = String(generatedPower);
+    }
+
+    addTotalField(shellyCards, "Power", Datastore.getTotalAcPowerEnabled(), "W", Datastore.getTotalAcPowerDigits());
 }
 
 void WebApiWsLiveClass::generateInverterCommonJsonResponse(JsonObject& root, std::shared_ptr<InverterAbstract> inv)
@@ -237,6 +277,23 @@ void WebApiWsLiveClass::onWebsocketEvent(AsyncWebSocket* server, AsyncWebSocketC
         MessageOutput.printf("Websocket: [%s][%u] connect\r\n", server->url(), client->id());
     } else if (type == WS_EVT_DISCONNECT) {
         MessageOutput.printf("Websocket: [%s][%u] disconnect\r\n", server->url(), client->id());
+    } else if (type == WS_EVT_DATA) {
+        MessageOutput.printf("Websocket Type: [%d], len = %d\r\n", type, len);
+
+        JsonDocument root;
+        const DeserializationError error = deserializeJson(root, data);
+
+        if (error) {
+            MessageOutput.printf("error %s\r\n", data);
+            return;
+        }
+        if (root["pro3em_value"].is<double_t>()) {
+            MessageOutput.printf("found pro3em_value\r\n");
+
+        } else {
+            MessageOutput.printf("not found pro3em_value\r\n");
+        }
+        MessageOutput.printf("data %s\r\n", data);
     }
 }
 
@@ -282,6 +339,144 @@ void WebApiWsLiveClass::onLivedataStatus(AsyncWebServerRequest* request)
         WebApi.sendTooManyRequests(request);
     } catch (const std::exception& exc) {
         MessageOutput.printf("Unknown exception in /api/livedata/status. Reason: \"%s\".\r\n", exc.what());
+        WebApi.sendTooManyRequests(request);
+    }
+}
+
+void WebApiWsLiveClass::generateDiagramJsonResponse(JsonVariant& root, String name, const RamDataType_t* types, int size)
+{
+    auto singleGraphArray = root[name].to<JsonArray>();
+
+    for (int i = 0; i < size; i++) {
+        auto singleGraphObject = singleGraphArray.add<JsonObject>();
+
+        const char* name = "";
+        const char* label = "";
+        const char* color = "";
+        switch (types[i]) {
+        case RamDataType_t::Pro3EM:
+            name = "data_pro3em";
+            label = "Pro3em";
+            color = "#ff0000";
+            break;
+        case RamDataType_t::Pro3EM_Min:
+            name = "data_pro3em_min";
+            label = "Min";
+            color = "#c8c8c8";
+            break;
+        case RamDataType_t::Pro3EM_Max:
+            name = "data_pro3em_max";
+            label = "Max";
+            color = "#646464";
+            break;
+
+        case RamDataType_t::PlugS:
+            name = "data_plugs";
+            label = "PlugS";
+            color = "#0000FF";
+            break;
+        case RamDataType_t::PlugS_Min:
+            name = "data_plugs_min";
+            label = "Min";
+            color = "#c8c8c8";
+            break;
+        case RamDataType_t::PlugS_Max:
+            name = "data_plugs_max";
+            label = "Max";
+            color = "#646464";
+            break;
+
+        case RamDataType_t::CalulatedLimit:
+            name = "data_calculated_limit";
+            label = "Calc Limit";
+            color = "#00FF00";
+            break;
+        case RamDataType_t::Limit:
+            name = "data_limit";
+            label = "Limit";
+            color = "#00aa00";
+            break;
+
+        default:
+            break;
+        };
+
+        singleGraphObject["data_name"] = name;
+        singleGraphObject["label"] = label;
+        singleGraphObject["color"] = color;
+    }
+}
+
+void WebApiWsLiveClass::onGraphUpdate(AsyncWebServerRequest* request)
+{
+    if (!WebApi.checkCredentialsReadonly(request)) {
+        return;
+    }
+
+    try {
+        std::lock_guard<std::mutex> lock(_mutex);
+
+        AsyncJsonResponse* response = new AsyncJsonResponse();
+        auto& root = response->getRoot();
+
+        const CONFIG_T& config = Configuration.get();
+        ShellyClientData& shellyData = ShellyClient.getShellyData();
+
+        ShellyViewOptions viewOptions = static_cast<ShellyViewOptions>(config.Shelly.ViewOption);
+        if (viewOptions >= ShellyViewOptions::SimpleInfo) {
+            root["view_option"] = config.Shelly.ViewOption;
+
+            generateShellyCardJsonResponse(root, viewOptions);
+
+            long long timestamp = 0;
+            uint32_t interval = 2 * TASK_SECOND;
+
+            if (request->hasParam("timestamp")) {
+                String s = request->getParam("timestamp")->value();
+
+                timestamp = strtoll(s.c_str(), NULL, 10);
+                if (timestamp == 0) {
+                    interval = 60 * TASK_SECOND;
+                }
+            }
+
+            root["timestamp"] = timestamp + interval;
+            root["interval"] = interval;
+
+            if (viewOptions >= ShellyViewOptions::DiagramInfo) {
+                String data;
+
+                root["data_pro3em"] = shellyData.GetLastData(RamDataType_t::Pro3EM, interval, data);
+                root["data_pro3em_min"] = shellyData.GetLastData(RamDataType_t::Pro3EM_Min, interval, data);
+                root["data_pro3em_max"] = shellyData.GetLastData(RamDataType_t::Pro3EM_Max, interval, data);
+
+                root["data_plugs"] = shellyData.GetLastData(RamDataType_t::PlugS, interval, data);
+                root["data_plugs_min"] = shellyData.GetLastData(RamDataType_t::PlugS_Min, interval, data);
+                root["data_plugs_max"] = shellyData.GetLastData(RamDataType_t::PlugS_Max, interval, data);
+
+                root["data_calculated_limit"] = shellyData.GetLastData(RamDataType_t::CalulatedLimit, interval, data);
+                root["data_limit"] = shellyData.GetLastData(RamDataType_t::Limit, interval, data);
+
+                const RamDataType_t a[] = { RamDataType_t::Pro3EM, RamDataType_t::Pro3EM_Min, RamDataType_t::Pro3EM_Max };
+                generateDiagramJsonResponse(root, "diagram_pro3em", a, 3);
+
+                const RamDataType_t b[] = { RamDataType_t::PlugS, RamDataType_t::PlugS_Min, RamDataType_t::PlugS_Max };
+                generateDiagramJsonResponse(root, "diagram_plugs", b, 3);
+
+                const RamDataType_t c[] = { RamDataType_t::CalulatedLimit, RamDataType_t::Limit };
+                generateDiagramJsonResponse(root, "diagram_limit", c, 2);
+
+                const RamDataType_t d[] = { RamDataType_t::Pro3EM, RamDataType_t::PlugS, RamDataType_t::Limit };
+                generateDiagramJsonResponse(root, "diagram_all", d, 3);
+            }
+        }
+
+        WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
+    } catch (const std::bad_alloc& bad_alloc) {
+        MessageOutput.printf("Call to /api/livedata/graph temporarely out of resources. Reason: \"%s\".\r\n", bad_alloc.what());
+        WebApi.sendTooManyRequests(request);
+    } catch (const std::exception& exc) {
+        MessageOutput.printf("Unknown exception in /api/livedata/graph. Reason: \"%s\".\r\n", exc.what());
         WebApi.sendTooManyRequests(request);
     }
 }

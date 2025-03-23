@@ -26,6 +26,8 @@
 #define MQTT_MAX_LWTVALUE_STRLEN 20
 #define MQTT_MAX_CERT_STRLEN 2560
 
+#define SHELLY_MAX_HOSTNAME_STRLEN 128
+
 #define INV_MAX_NAME_STRLEN 31
 #define INV_MAX_COUNT 10
 #define INV_MAX_CHAN_COUNT 6
@@ -137,6 +139,18 @@ struct CONFIG_T {
             uint8_t CountryMode;
         } Cmt;
     } Dtu;
+
+    struct {
+        bool ShellyEnable;
+        char Hostname_Pro3EM[SHELLY_MAX_HOSTNAME_STRLEN + 1];
+        char Hostname_PlugS[SHELLY_MAX_HOSTNAME_STRLEN + 1];
+        bool LimitEnable;
+        uint32_t MaxPower;
+        uint32_t MinPower;
+        int32_t TargetValue;
+        uint32_t FeedInLevel;
+        uint32_t ViewOption;
+    } Shelly;
 
     struct {
         char Password[WIFI_MAX_PASSWORD_STRLEN + 1];

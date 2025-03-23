@@ -58,7 +58,7 @@ export default defineComponent({
         showReload: { type: Boolean, required: false, default: false },
     },
     mounted() {
-        console.log('init');
+        //console.log('init');
         PullToRefresh.init({
             mainElement: 'body', // above which element?
             instructionsPullToRefresh: this.$t('base.Pull'),
@@ -70,7 +70,7 @@ export default defineComponent({
         });
     },
     unmounted() {
-        console.log('destroy');
+        //console.log('destroy');
         PullToRefresh.destroyAll();
     },
 });

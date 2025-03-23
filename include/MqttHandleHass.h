@@ -90,6 +90,8 @@ private:
     static void publishInverterButton(std::shared_ptr<InverterAbstract> inv, const String& name, const String& state_topic, const String& payload, const String& icon, const DeviceClassType device_class, const StateClassType state_class, const CategoryType category);
     static void publishInverterNumber(std::shared_ptr<InverterAbstract> inv, const String& name, const String& state_topic, const String& command_topic, const int16_t min, const int16_t max, float step, const String& unit_of_measure, const String& icon, const StateClassType state_class, const CategoryType category);
 
+    void publishShelly(std::shared_ptr<InverterAbstract> inv, const char* caption, const char* stateTopic, const char* device_class, const char* unit_of_measure);
+
     static void createInverterInfo(JsonDocument& doc, std::shared_ptr<InverterAbstract> inv);
     static void createDtuInfo(JsonDocument& doc);
 

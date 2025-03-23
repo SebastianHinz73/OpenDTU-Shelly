@@ -70,7 +70,7 @@ void MqttHandleHassClass::publishConfig()
     publishDtuSensor("Yield Total", "ac/yieldtotal", "kWh", "", DEVICE_CLS_ENERGY, STATE_CLS_TOTAL_INCREASING, CATEGORY_NONE);
     publishDtuSensor("Yield Day", "ac/yieldday", "Wh", "", DEVICE_CLS_ENERGY, STATE_CLS_TOTAL_INCREASING, CATEGORY_NONE);
     publishDtuSensor("AC Power", "ac/power", "W", "", DEVICE_CLS_PWR, STATE_CLS_MEASUREMENT, CATEGORY_NONE);
-    publishDtuSensor("DC Power", "dc/power", "W", "", DEVICE_CLS_PWR, STATE_CLS_MEASUREMENT, CATEGORY_NONE);  
+    publishDtuSensor("DC Power", "dc/power", "W", "", DEVICE_CLS_PWR, STATE_CLS_MEASUREMENT, CATEGORY_NONE);
 
     publishDtuBinarySensor("Status", config.Mqtt.Lwt.Topic, config.Mqtt.Lwt.Value_Online, config.Mqtt.Lwt.Value_Offline, DEVICE_CLS_CONNECTIVITY, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
 
@@ -99,6 +99,13 @@ void MqttHandleHassClass::publishConfig()
         publishInverterSensor(inv, "RX Fail Receive Corrupt", "radio/rx_fail_corrupt", "", "", DEVICE_CLS_NONE, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
         publishInverterSensor(inv, "TX Re-Request Fragment", "radio/tx_re_request", "", "", DEVICE_CLS_NONE, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
         publishInverterSensor(inv, "RSSI", "radio/rssi", "dBm", "", DEVICE_CLS_SIGNAL_STRENGTH, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
+
+        // publish Shelly
+        publishShelly(inv, "Shelly Limit", "shelly/limit", "power", "W");
+        publishShelly(inv, "ShellyPro3em Power", "shelly/pro3em_power", "power", "W");
+        publishShelly(inv, "ShellyPro3em Update Time", "shelly/pro3em_time", "duration", "s");
+        publishShelly(inv, "ShellyPlugS Power", "shelly/plugs_power", "power", "W");
+        publishShelly(inv, "ShellyPlugS Update Time", "shelly/plugs_time", "duration", "s");
 
         // Loop all channels
         for (auto& t : inv->Statistics()->getChannelTypes()) {
@@ -236,6 +243,46 @@ void MqttHandleHassClass::publishInverterNumber(
     publish(configTopic, root);
 }
 
+void MqttHandleHassClass::publishShelly(std::shared_ptr<InverterAbstract> inv, const char* caption, const char* stateTopic, const char* device_class, const char* unit_of_measure)
+{
+
+    // TODO (shi)
+    /*
+    DynamicJsonDocument root(1024);
+    if (!Utils::checkJsonAlloc(root, __FUNCTION__, __LINE__)) {
+        return;
+    }
+
+    const String serial = inv->serialString();
+
+    String buttonId = caption;
+    buttonId.replace(" ", "_");
+    buttonId.toLowerCase();
+
+    const String configTopic = "sensor/dtu_" + serial
+        + "/" + buttonId
+        + "/config";
+
+    root["name"] = caption;
+    root["stat_t"] = MqttSettings.getPrefix() + serial + "/" + stateTopic;
+    root["uniq_id"] = serial + "_" + buttonId;
+    root["unit_of_meas"] = unit_of_measure;
+
+    auto object = root.createNestedObject("dev");
+
+    object["name"] = NetworkSettings.getHostname();
+    object["ids"] = serial;
+
+    root["dev_cla"] = device_class;
+    root["stat_cla"] = "measurement";
+
+    String buffer;
+    serializeJson(root, buffer);
+
+    publish(configTopic, buffer);
+    */
+}
+
 void MqttHandleHassClass::createInverterInfo(JsonDocument& root, std::shared_ptr<InverterAbstract> inv)
 {
     createDeviceInfo(
@@ -324,7 +371,7 @@ void MqttHandleHassClass::addCommonMetadata(
         doc["dev_cla"] = deviceClass_name[device_class];
     }
     if (state_class != STATE_CLS_NONE) {
-        doc["stat_cla"] = stateClass_name[state_class];;
+        doc["stat_cla"] = stateClass_name[state_class];
     }
     if (category != CATEGORY_NONE) {
         doc["ent_cat"] = category_name[category];
