@@ -3,7 +3,6 @@
 
 #include "Configuration.h"
 #include "ShellyClientData.h"
-#include "ShellyClientMqtt.h"
 #include <ArduinoJson.h>
 #include <TaskSchedulerDeclarations.h>
 #include <WebSocketsClient.h>

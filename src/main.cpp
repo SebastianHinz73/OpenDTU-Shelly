@@ -154,7 +154,6 @@ void setup()
     MessageOutput.print("Initialize Shelly... ");
     ShellyClient.init(scheduler);
     LimitControl.init(scheduler);
-    ShellyClientMqtt.init(scheduler);
     MessageOutput.println("done");
     InverterSettings.init(scheduler);
 

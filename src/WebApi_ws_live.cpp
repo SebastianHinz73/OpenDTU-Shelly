@@ -157,17 +157,15 @@ void WebApiWsLiveClass::generateShellyCardJsonResponse(JsonVariant& root, Shelly
     JsonObject shellyCards = root["cards"].to<JsonObject>();
     ShellyClientData& shellyData = ShellyClient.getShellyData();
 
-    float gridPower = shellyData.GetFactoredValue(RamDataType_t::Pro3EM, 5000);
-    float generatedPower = shellyData.GetFactoredValue(RamDataType_t::PlugS, 5000);
-
     shellyCards["pro3em_value"] = shellyData.GetActValue(RamDataType_t::Pro3EM);
     shellyCards["plugs_value"] = shellyData.GetActValue(RamDataType_t::PlugS);
     shellyCards["limit_value"] = shellyData.GetActValue(RamDataType_t::Limit);
 
     if (viewOptions >= ShellyViewOptions::CompleteInfo) {
-        shellyCards["pro3em_debug"] = String(gridPower);
-        shellyCards["plugs_debug"] = String(generatedPower);
-        shellyCards["limit_debug"] = String(generatedPower);
+        String data;
+        shellyCards["pro3em_debug"] = shellyData.GetDebug(ShellyClientDataType_t::Pro3EM, data);
+        shellyCards["plugs_debug"] = shellyData.GetDebug(ShellyClientDataType_t::PlugS, data);
+        shellyCards["limit_debug"] = shellyData.GetDebug(ShellyClientDataType_t::CalulatedLimit, data);
     }
 
     addTotalField(shellyCards, "Power", Datastore.getTotalAcPowerEnabled(), "W", Datastore.getTotalAcPowerDigits());
