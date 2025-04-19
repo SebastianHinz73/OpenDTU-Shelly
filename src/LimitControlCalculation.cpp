@@ -36,7 +36,7 @@ void LimitControlCalculation::loop(IShellyClientData& shellyClientData, ILimitCo
     }
 
     bool bInv = hoymiles.isReachable();
-    if (bInv) {
+    if (!bInv) {
         shellyClientData.Update(ShellyClientDataType_t::CalulatedLimit, "!inv->isReachable()");
     } else {
         _channelCnt = hoymiles.fetchChannelPower(_channelPower);

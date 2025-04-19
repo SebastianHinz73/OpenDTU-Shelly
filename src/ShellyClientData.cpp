@@ -119,7 +119,7 @@ std::string& ShellyClientData::GetLastData(RamDataType_t type, time_t lastMillis
         } else {
             result += std::string(",");
         }
-        //result += std::string("{\"x\": ") + static_cast<float>(entry->time) / TASK_SECOND + std::string(",\"y\": ") + entry->value + std::string("}");
+        result += std::string("{\"x\": ") + std::to_string(static_cast<float>(entry->time) / TASK_SECOND) + std::string(",\"y\": ") + std::to_string(entry->value) + std::string("}");
     });
     result += " ]";
 

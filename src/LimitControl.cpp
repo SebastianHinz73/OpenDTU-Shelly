@@ -60,5 +60,5 @@ int LimitControlClass::fetchChannelPower(float channelPower[])
 
 unsigned long LimitControlClass::millis()
 {
-    return millis();
+    return ::millis();
 }
