@@ -155,14 +155,14 @@ void WebApiWsLiveClass::generateCommonJsonResponse(JsonVariant& root)
 void WebApiWsLiveClass::generateShellyCardJsonResponse(JsonVariant& root, ShellyViewOptions viewOptions)
 {
     JsonObject shellyCards = root["cards"].to<JsonObject>();
-    ShellyClientData& shellyData = ShellyClient.getShellyData();
+    IShellyClientData& shellyData = ShellyClient.getShellyData();
 
     shellyCards["pro3em_value"] = shellyData.GetActValue(RamDataType_t::Pro3EM);
     shellyCards["plugs_value"] = shellyData.GetActValue(RamDataType_t::PlugS);
     shellyCards["limit_value"] = shellyData.GetActValue(RamDataType_t::Limit);
 
     if (viewOptions >= ShellyViewOptions::CompleteInfo) {
-        String data;
+        std::string data;
         shellyCards["pro3em_debug"] = shellyData.GetDebug(ShellyClientDataType_t::Pro3EM, data);
         shellyCards["plugs_debug"] = shellyData.GetDebug(ShellyClientDataType_t::PlugS, data);
         shellyCards["limit_debug"] = shellyData.GetDebug(ShellyClientDataType_t::CalulatedLimit, data);
@@ -418,7 +418,7 @@ void WebApiWsLiveClass::onGraphUpdate(AsyncWebServerRequest* request)
         auto& root = response->getRoot();
 
         const CONFIG_T& config = Configuration.get();
-        ShellyClientData& shellyData = ShellyClient.getShellyData();
+        IShellyClientData& shellyData = ShellyClient.getShellyData();
 
         ShellyViewOptions viewOptions = static_cast<ShellyViewOptions>(config.Shelly.ViewOption);
         if (viewOptions >= ShellyViewOptions::SimpleInfo) {
@@ -442,7 +442,7 @@ void WebApiWsLiveClass::onGraphUpdate(AsyncWebServerRequest* request)
             root["interval"] = interval;
 
             if (viewOptions >= ShellyViewOptions::DiagramInfo) {
-                String data;
+                std::string data;
 
                 root["data_pro3em"] = shellyData.GetLastData(RamDataType_t::Pro3EM, interval, data);
                 root["data_pro3em_min"] = shellyData.GetLastData(RamDataType_t::Pro3EM_Min, interval, data);

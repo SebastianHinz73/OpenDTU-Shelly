@@ -31,7 +31,7 @@ void ShellyClientData::Update(RamDataType_t type, float value)
     _ramBuffer->writeValue(type, millis(), value);
 }
 
-void ShellyClientData::Update(ShellyClientDataType_t type, String value)
+void ShellyClientData::Update(ShellyClientDataType_t type, std::string value)
 {
     std::lock_guard<std::mutex> lock(_mutex);
 
@@ -107,7 +107,7 @@ float ShellyClientData::GetFactoredValue(RamDataType_t type, time_t lastMillis)
     return min + (max - min) * factor;
 }
 
-String& ShellyClientData::GetLastData(RamDataType_t type, time_t lastMillis, String& result)
+std::string& ShellyClientData::GetLastData(RamDataType_t type, time_t lastMillis, std::string& result)
 {
     std::lock_guard<std::mutex> lock(_mutex);
 
@@ -117,22 +117,22 @@ String& ShellyClientData::GetLastData(RamDataType_t type, time_t lastMillis, Str
         if (cnt == 0) {
             cnt++;
         } else {
-            result += String(",");
+            result += std::string(",");
         }
-        result += String("{\"x\": ") + static_cast<float>(entry->time) / TASK_SECOND + String(",\"y\": ") + entry->value + String("}");
+        //result += std::string("{\"x\": ") + static_cast<float>(entry->time) / TASK_SECOND + std::string(",\"y\": ") + entry->value + std::string("}");
     });
     result += " ]";
 
     return result;
 }
 
-String& ShellyClientData::GetDebug(ShellyClientDataType_t type, String& result)
+std::string& ShellyClientData::GetDebug(ShellyClientDataType_t type, std::string& result)
 {
     std::lock_guard<std::mutex> lock(_mutex);
 
     if (type >= ShellyClientDataType_t::Pro3EM && type < ShellyClientDataType_t::MAX) {
         uint16_t i = (uint16_t)type;
-        result = _Debug[i];
+        result = _Debug[i].c_str();
         _Debug[i] = "";
     }
 

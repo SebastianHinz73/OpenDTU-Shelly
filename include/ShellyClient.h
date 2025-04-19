@@ -45,7 +45,7 @@ public:
     ShellyClientClass();
     void init(Scheduler& scheduler);
     void loop();
-    ShellyClientData& getShellyData() { return _shellyClientData; }
+    IShellyClientData& getShellyData() { return _shellyClientData; }
 
 private:
     void HandleWebsocket(WebSocketData& data, const char* hostname, std::function<void(WStype_t type, uint8_t* payload, size_t length)> cbEvent);

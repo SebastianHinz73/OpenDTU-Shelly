@@ -114,7 +114,7 @@ bool ConfigurationClass::write()
     shelly["target_value"] = config.Shelly.TargetValue;
     shelly["feed_in_level"] = config.Shelly.FeedInLevel;
     shelly["view_option"] = config.Shelly.ViewOption;
-    
+
     JsonObject security = doc["security"].to<JsonObject>();
     security["password"] = config.Security.Password;
     security["allow_readonly"] = config.Security.AllowReadonly;
@@ -301,7 +301,7 @@ bool ConfigurationClass::read()
     config.Shelly.TargetValue = shelly["target_value"] | SHELLY_TARGET_VALUE;
     config.Shelly.FeedInLevel = shelly["feed_in_level"] | SHELLY_FEED_IN_LEVEL;
     config.Shelly.ViewOption = shelly["view_option"] | SHELLY_VIEW_OPTION;
-    
+
     JsonObject security = doc["security"];
     strlcpy(config.Security.Password, security["password"] | ACCESS_POINT_PASSWORD, sizeof(config.Security.Password));
     config.Security.AllowReadonly = security["allow_readonly"] | SECURITY_ALLOW_READONLY;
@@ -511,7 +511,9 @@ void ConfigurationClass::deleteInverterById(const uint8_t id)
 void ConfigurationClass::loop()
 {
     std::unique_lock<std::mutex> lock(sWriterMutex);
-    if (sWriterCount == 0) { return; }
+    if (sWriterCount == 0) {
+        return;
+    }
 
     sWriterCv.notify_all();
     sWriterCv.wait(lock, [] { return sWriterCount == 0; });
@@ -529,9 +531,12 @@ ConfigurationClass::WriteGuard::WriteGuard()
     sWriterCv.wait(_lock);
 }
 
-ConfigurationClass::WriteGuard::~WriteGuard() {
+ConfigurationClass::WriteGuard::~WriteGuard()
+{
     sWriterCount--;
-    if (sWriterCount == 0) { sWriterCv.notify_all(); }
+    if (sWriterCount == 0) {
+        sWriterCv.notify_all();
+    }
 }
 
 ConfigurationClass Configuration;
