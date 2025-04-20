@@ -12,4 +12,5 @@ public:
 private:
     void onShellyAdminGet(AsyncWebServerRequest* request);
     void onShellyAdminPost(AsyncWebServerRequest* request);
+    void onShellyFileGet(AsyncWebServerRequest* request);
 };

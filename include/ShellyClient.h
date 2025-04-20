@@ -2,6 +2,7 @@
 #pragma once
 
 #include "Configuration.h"
+#include "LimitControlCalculation.h"
 #include "ShellyClientData.h"
 #include <ArduinoJson.h>
 #include <TaskSchedulerDeclarations.h>
@@ -40,12 +41,13 @@ public:
     uint32_t MaxInterval;
 };
 
-class ShellyClientClass {
+class ShellyClientClass : public ShellyClientData {
 public:
     ShellyClientClass();
     void init(Scheduler& scheduler);
-    void loop();
-    IShellyClientData& getShellyData() { return _shellyClientData; }
+    void loopFetch();
+    void loopCalc();
+    IShellyClientData& getShellyData() { return *this; }
 
 private:
     void HandleWebsocket(WebSocketData& data, const char* hostname, std::function<void(WStype_t type, uint8_t* payload, size_t length)> cbEvent);
@@ -55,10 +57,11 @@ private:
 
 private:
     std::mutex _mutex;
-    Task _loopTask;
+    Task _loopFetchTask;
+    Task _loopCalcTask;
     WebSocketData _Pro3EM;
     WebSocketData _PlugS;
-    ShellyClientData _shellyClientData;
+    LimitControlCalculation _calc;
 };
 
 extern ShellyClientClass ShellyClient;

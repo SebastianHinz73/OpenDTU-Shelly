@@ -4,11 +4,12 @@
  */
 
 #include "RamBuffer.h"
-#include "MessageOutput.h"
+// #include "MessageOutput.h"
 
-RamBuffer::RamBuffer(uint8_t* buffer, size_t size)
+RamBuffer::RamBuffer(uint8_t* buffer, size_t size, ITimeLapse& timeLapse)
     : _header(reinterpret_cast<dataEntryHeader_t*>(buffer))
     , _elements((size - sizeof(dataEntryHeader_t)) / sizeof(dataEntry_t))
+    , _timeLapse(timeLapse)
 {
     // On reset: _header, _cache and _cacheSize is set. The values in PSRAM are not changes/deleted.
     // On power on: do additional initialisation
@@ -70,11 +71,11 @@ dataEntry_t* RamBuffer::getLastEntry(RamDataType_t type)
     return nullptr;
 }
 
-void RamBuffer::forAllEntriesReverse(RamDataType_t type, time_t lastMillis, const std::function<void(dataEntry_t*)>& doDataEntry)
+void RamBuffer::forAllEntriesReverse(RamDataType_t type, time_t lastMillis, const DoDataEntry& doDataEntry)
 {
     dataEntry_t* act = _header->last;
 
-    time_t startTime = millis() - lastMillis;
+    time_t startTime = _timeLapse.millis() - lastMillis;
     startTime = startTime < 0 ? 0 : startTime;
 
     if (_header->last < _header->first) // buffer full
@@ -101,10 +102,11 @@ void RamBuffer::forAllEntriesReverse(RamDataType_t type, time_t lastMillis, cons
     }
 }
 
-void RamBuffer::forAllEntries(RamDataType_t type, time_t lastMillis, const std::function<void(dataEntry_t*)>& doDataEntry)
+void RamBuffer::forAllEntries(RamDataType_t type, time_t lastMillis, const DoDataEntry& doDataEntry)
 {
     dataEntry_t* act = toStartEntry(type, lastMillis);
     if (act == nullptr) {
+        // MessageOutput.printf("toStartEntry: ## (%d)\r\n", type);
         return;
     }
 
@@ -112,11 +114,13 @@ void RamBuffer::forAllEntries(RamDataType_t type, time_t lastMillis, const std::
         while (act < _header->end) {
             // end check
             if (act == _header->last) {
+                // MessageOutput.printf("act == _header->last: ## (%d)\r\n", type);
                 return;
             }
 
             // type check
             if (type == act->type) {
+                // MessageOutput.printf("doDataEntry: ## (%d)\r\n", type);
                 doDataEntry(act);
             }
             act++;
@@ -125,9 +129,35 @@ void RamBuffer::forAllEntries(RamDataType_t type, time_t lastMillis, const std::
     }
 }
 
+bool RamBuffer::getNextEntry(dataEntry_t*& act)
+{
+    // start with _header->first, then increment
+    if (act == nullptr) {
+        act = _header->first;
+    } else if (act == _header->last) {
+        return false;
+    } else {
+        act++;
+    }
+
+    for (int i = 0; i < 2; i++) {
+        while (act < _header->end) {
+
+            // end check
+            if (act == _header->last) {
+                return false;
+            }
+
+            return true;
+        }
+        act = _header->start; // start again with _header->start
+    }
+    return false;
+}
+
 dataEntry_t* RamBuffer::toStartEntry(RamDataType_t type, time_t lastMillis)
 {
-    time_t startTime = millis() - lastMillis;
+    time_t startTime = _timeLapse.millis() - lastMillis;
 
     dataEntry_t* act = _header->last;
     dataEntry_t* found = nullptr;

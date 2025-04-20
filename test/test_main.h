@@ -2,3 +2,4 @@
 #pragma once
 
 void test_LimitControl();
+void test_RamBuffer();

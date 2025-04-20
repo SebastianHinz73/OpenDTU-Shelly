@@ -4,7 +4,6 @@
 #include "WebApi_device.h"
 #include "WebApi_devinfo.h"
 #include "WebApi_dtu.h"
-#include "WebApi_shelly.h"
 #include "WebApi_errors.h"
 #include "WebApi_eventlog.h"
 #include "WebApi_file.h"
@@ -20,6 +19,7 @@
 #include "WebApi_power.h"
 #include "WebApi_prometheus.h"
 #include "WebApi_security.h"
+#include "WebApi_shelly.h"
 #include "WebApi_sysstatus.h"
 #include "WebApi_webapp.h"
 #include "WebApi_ws_console.h"
@@ -54,6 +54,7 @@ private:
     WebApiShellyClass _webApiShelly;
     WebApiEventlogClass _webApiEventlog;
     WebApiFileClass _webApiFile;
+
     WebApiFirmwareClass _webApiFirmware;
     WebApiGridProfileClass _webApiGridprofile;
     WebApiI18nClass _webApiI18n;

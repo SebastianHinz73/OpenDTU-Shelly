@@ -1,27 +1,71 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Copyright (C) 2023 Sebastian Hinz
+ * Copyright (C) 2025 Sebastian Hinz
  */
 
 #include "ShellyClient.h"
+#include "ILimitControlHoymiles.h"
 #include "MessageOutput.h"
-#include "MqttSettings.h"
-#include "SunPosition.h"
-#include <Arduino.h>
 #include <Hoymiles.h>
-#include <cfloat>
+
+class HoymilesInterface : public ILimitControlHoymiles, public ITimeLapse {
+public:
+    virtual ~HoymilesInterface() { }
+
+private:
+    virtual bool isReachable()
+    {
+        auto inv = Hoymiles.getInverterByPos(0);
+        return inv != nullptr && inv->isReachable();
+    }
+    virtual bool sendLimit(float limit)
+    {
+        auto inv = Hoymiles.getInverterByPos(0);
+        return inv && inv->sendActivePowerControlRequest(limit, PowerLimitControlType::AbsolutNonPersistent);
+    }
+    virtual int fetchChannelPower(float channelPower[])
+    {
+        int channelCnt = 0;
+        auto inv = Hoymiles.getInverterByPos(0);
+        if (inv) {
+            String limit = "(";
+            for (auto& c : inv->Statistics()->getChannelsByType(TYPE_DC)) {
+                if (inv->Statistics()->getStringMaxPower(c) > 0) {
+                    auto power = inv->Statistics()->getChannelFieldValue(TYPE_DC, c, FLD_PDC);
+                    channelPower[c] = power;
+                    channelCnt++;
+                    limit += String(static_cast<int>(power)) + ",";
+                }
+            }
+            limit += ")";
+        }
+        return channelCnt;
+    }
+
+    virtual unsigned long millis()
+    {
+        return ::millis();
+    }
+};
+
+HoymilesInterface hoymilesInterfaces;
 
 ShellyClientClass ShellyClient;
 
 ShellyClientClass::ShellyClientClass()
-    : _loopTask(TASK_IMMEDIATE, TASK_FOREVER, std::bind(&ShellyClientClass::loop, this))
+    : ShellyClientData(hoymilesInterfaces)
+    , _loopFetchTask(TASK_IMMEDIATE, TASK_FOREVER, std::bind(&ShellyClientClass::loopFetch, this))
+    , _loopCalcTask(1 * TASK_SECOND, TASK_FOREVER, std::bind(&ShellyClientClass::loopCalc, this))
 {
 }
 
 void ShellyClientClass::init(Scheduler& scheduler)
 {
-    scheduler.addTask(_loopTask);
-    _loopTask.enable();
+    scheduler.addTask(_loopFetchTask);
+    _loopFetchTask.enable();
+
+    scheduler.addTask(_loopCalcTask);
+    _loopCalcTask.enable();
 
     _Pro3EM.ShellyType = RamDataType_t::Pro3EM;
     _Pro3EM.MaxInterval = 5000;
@@ -29,7 +73,7 @@ void ShellyClientClass::init(Scheduler& scheduler)
     _PlugS.MaxInterval = 5000;
 }
 
-void ShellyClientClass::loop()
+void ShellyClientClass::loopFetch()
 {
     while (WiFi.status() != WL_CONNECTED) {
         return;
@@ -37,11 +81,15 @@ void ShellyClientClass::loop()
     // if (!SunPosition.isDayPeriod()) {
     //     return;
     // }
-
     const CONFIG_T& config = Configuration.get();
 
     HandleWebsocket(_Pro3EM, config.Shelly.Hostname_Pro3EM, ShellyClientClass::EventsPro3EM);
     HandleWebsocket(_PlugS, config.Shelly.Hostname_PlugS, ShellyClientClass::EventsPlugS);
+}
+
+void ShellyClientClass::loopCalc()
+{
+    _calc.loop(*this, hoymilesInterfaces, hoymilesInterfaces);
 }
 
 void ShellyClientClass::HandleWebsocket(WebSocketData& data, const char* hostname, std::function<void(WStype_t type, uint8_t* payload, size_t length)> cbEvent)
@@ -82,7 +130,7 @@ void ShellyClientClass::HandleWebsocket(WebSocketData& data, const char* hostnam
             data.LastTime = nowMillis;
             data.UpdatedTime = data.LastTime;
         } else if (nowMillis - data.UpdatedTime > 1000) {
-            _shellyClientData.Update(data.ShellyType, data.LastValue);
+            ShellyClientData::Update(data.ShellyType, data.LastValue);
             data.UpdatedTime += 1000;
         }
     }
@@ -128,11 +176,11 @@ void ShellyClientClass::Events(WebSocketData& data, WStype_t type, uint8_t* payl
 
         if (data.ShellyType == RamDataType_t::Pro3EM) {
             if (ParseDouble("\"total_act_power\":", data.LastValue)) {
-                _shellyClientData.Update(data.ShellyType, data.LastValue);
+                ShellyClientData::Update(data.ShellyType, data.LastValue);
             }
         } else {
             if (ParseDouble("\"apower\":", data.LastValue)) {
-                _shellyClientData.Update(data.ShellyType, data.LastValue);
+                ShellyClientData::Update(data.ShellyType, data.LastValue);
             }
         }
     } break;

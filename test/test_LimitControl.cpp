@@ -16,12 +16,20 @@
 
 #include "Configuration.h"
 #include "LimitControlCalculation.h"
+#include "ShellyClientDataMock.h"
 #include <unity.h>
-
-LimitControlCalculation limitCalc;
 
 void test_abc(void)
 {
+    ShellyClientDataMock shellyMock;
+    LimitControlCalculation limitCalc;
+
+    TEST_ASSERT_EQUAL(true, shellyMock.OpenFile("test\\ShellyData\\shelly_data3.bin"));
+
+    while (shellyMock.loop()) {
+        limitCalc.loop(shellyMock, shellyMock, shellyMock);
+    }
+
     TEST_ASSERT_EQUAL(32, 32);
 }
 

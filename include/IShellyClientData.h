@@ -2,7 +2,7 @@
 #pragma once
 
 #include "RamDataType.h"
-// #include <Arduino.h>
+#include <functional>
 #include <string>
 
 enum class ShellyClientDataType_t : uint16_t {
@@ -11,6 +11,8 @@ enum class ShellyClientDataType_t : uint16_t {
     CalulatedLimit,
     MAX,
 };
+
+typedef std::function<size_t(uint8_t* buffer, size_t maxLen, size_t alreadySent, size_t fileSize)> ResponseFiller;
 
 class IShellyClientData {
 public:
@@ -24,4 +26,5 @@ public:
     virtual float GetFactoredValue(RamDataType_t type, time_t lastMillis) = 0;
     virtual std::string& GetLastData(RamDataType_t type, time_t lastMillis, std::string& result) = 0;
     virtual std::string& GetDebug(ShellyClientDataType_t type, std::string& result) = 0;
+    virtual void BackupAll(size_t& fileSize, ResponseFiller& responseFiller) = 0;
 };

@@ -5,16 +5,15 @@
 
 #include "ShellyClientData.h"
 #include "Configuration.h"
-#include "MessageOutput.h"
 #include <cfloat>
-#include <esp32-hal.h>
 
-ShellyClientData::ShellyClientData()
+ShellyClientData::ShellyClientData(ITimeLapse& timeLapse)
+    : _timeLapse(timeLapse)
 {
     int ramDiskSize = 4096; // 7 * 60 Sekunden * 10 Bytes = 4200
     uint8_t* ramDisk = new uint8_t[ramDiskSize];
 
-    _ramBuffer = new RamBuffer(ramDisk, ramDiskSize);
+    _ramBuffer = new RamBuffer(ramDisk, ramDiskSize, _timeLapse);
     _ramBuffer->PowerOnInitialize();
 }
 
@@ -28,7 +27,7 @@ void ShellyClientData::Update(RamDataType_t type, float value)
 {
     std::lock_guard<std::mutex> lock(_mutex);
 
-    _ramBuffer->writeValue(type, millis(), value);
+    _ramBuffer->writeValue(type, _timeLapse.millis(), value);
 }
 
 void ShellyClientData::Update(ShellyClientDataType_t type, std::string value)
@@ -124,6 +123,34 @@ std::string& ShellyClientData::GetLastData(RamDataType_t type, time_t lastMillis
     result += " ]";
 
     return result;
+}
+
+void ShellyClientData::BackupAll(size_t& fileSize, ResponseFiller& responseFiller)
+{
+    _mutex.lock();
+
+    fileSize = _ramBuffer->getUsedElements() * sizeof(dataEntry_t);
+
+    static dataEntry_t* act;
+    act = nullptr;
+
+    responseFiller = [&](uint8_t* buffer, size_t maxLen, size_t alreadySent, size_t fileSize) -> size_t {
+        size_t ret = 0;
+        size_t maxCnt = maxLen / sizeof(dataEntry_t);
+
+        for (size_t cnt = 0; cnt < maxCnt; cnt++) {
+            if (!_ramBuffer->getNextEntry(act)) {
+                break;
+            }
+            memcpy(&buffer[cnt * sizeof(dataEntry_t)], act, sizeof(dataEntry_t));
+            ret += sizeof(dataEntry_t);
+        }
+
+        if (ret == 0) {
+            _mutex.unlock();
+        }
+        return ret;
+    };
 }
 
 std::string& ShellyClientData::GetDebug(ShellyClientDataType_t type, std::string& result)

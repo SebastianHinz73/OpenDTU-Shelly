@@ -9,6 +9,9 @@
 #include "helper.h"
 #include <AsyncJson.h>
 #include <Hoymiles.h>
+#include <MessageOutput.h>
+#include <ShellyClient.h>
+#include <ShellyClientData.h>
 
 WebApiShellyClass::WebApiShellyClass()
 {
@@ -20,6 +23,7 @@ void WebApiShellyClass::init(AsyncWebServer& server, Scheduler& scheduler)
 
     server.on("/api/shelly/config", HTTP_GET, std::bind(&WebApiShellyClass::onShellyAdminGet, this, _1));
     server.on("/api/shelly/config", HTTP_POST, std::bind(&WebApiShellyClass::onShellyAdminPost, this, _1));
+    server.on("/api/shelly/file", HTTP_GET, std::bind(&WebApiShellyClass::onShellyFileGet, this, _1));
 }
 
 void WebApiShellyClass::onShellyAdminGet(AsyncWebServerRequest* request)
@@ -158,5 +162,27 @@ void WebApiShellyClass::onShellyAdminPost(AsyncWebServerRequest* request)
     WebApi.writeConfig(retMsg);
 
     response->setLength();
+    request->send(response);
+}
+
+void WebApiShellyClass::onShellyFileGet(AsyncWebServerRequest* request)
+{
+    if (!WebApi.checkCredentials(request)) {
+        return;
+    }
+
+    MessageOutput.print("onFileGet\r\n");
+
+    static size_t fileSize = 0;
+    static ResponseFiller responseFiller;
+
+    auto& data = ShellyClient.getShellyData();
+    data.BackupAll(fileSize, responseFiller);
+
+    AsyncWebServerResponse* response = request->beginResponse("application/octet-stream", fileSize, [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
+        MessageOutput.printf("beginResponse maxLen=%d, alreadySent=%d\r\n", maxLen, alreadySent);
+        return responseFiller(buffer, maxLen, alreadySent, fileSize);
+    });
+    response->addHeader("Server", "ESP Async Web Server");
     request->send(response);
 }

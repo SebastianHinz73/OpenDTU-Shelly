@@ -27,8 +27,9 @@ void tearDown(void)
     // clean stuff up here
 }
 
-int main()
+int main(int, char**)
 {
+    // test_RamBuffer();
     test_LimitControl();
     return 0;
 }

@@ -1,16 +1,15 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
-
+#include "ILimitControlHoymiles.h"
 #include "IShellyClientData.h"
 #include "ITimeLapse.h"
 #include "RamBuffer.h"
-#include <Arduino.h>
 #include <mutex>
+#include <fstream>
 
-class ShellyClientData : public IShellyClientData {
+class ShellyClientDataMock : public IShellyClientData, public ILimitControlHoymiles, public ITimeLapse {
 public:
-    ShellyClientData(ITimeLapse& timeLapse);
-    virtual ~ShellyClientData();
+    ShellyClientDataMock();
+    virtual ~ShellyClientDataMock();
 
     virtual void Update(RamDataType_t type, float value);
     virtual void Update(ShellyClientDataType_t type, std::string value);
@@ -22,9 +21,22 @@ public:
     virtual std::string& GetDebug(ShellyClientDataType_t type, std::string& result);
     virtual void BackupAll(size_t& fileSize, ResponseFiller& responseFiller);
 
+    virtual bool isReachable() { return true; }
+    virtual bool sendLimit(float limit);
+    virtual int fetchChannelPower(float channelPower[]);
+
+    virtual unsigned long millis();
+
+    bool OpenFile(std::string file);
+    bool loop();
+
 private:
-    ITimeLapse& _timeLapse;
+    dataEntry_t* getActualOrNext(bool bNext);
+
+private:
     std::mutex _mutex;
     RamBuffer* _ramBuffer;
     std::string _Debug[(uint16_t)ShellyClientDataType_t::MAX];
+    unsigned long _myTime = 0;
+    std::ifstream _file;
 };

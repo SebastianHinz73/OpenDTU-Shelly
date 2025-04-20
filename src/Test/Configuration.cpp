@@ -15,4 +15,9 @@ CONFIG_T const& ConfigurationClass::get()
 }
 
 ConfigurationClass Configuration;
+
+int WinMain()
+{
+    return 0;
+}
 #endif

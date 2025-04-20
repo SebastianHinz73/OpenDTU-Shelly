@@ -8,7 +8,6 @@
 #include "I18n.h"
 #include "InverterSettings.h"
 #include "Led_Single.h"
-#include "LimitControl.h"
 #include "MessageOutput.h"
 #include "MqttHandleDtu.h"
 #include "MqttHandleHass.h"
@@ -153,7 +152,6 @@ void setup()
 
     MessageOutput.print("Initialize Shelly... ");
     ShellyClient.init(scheduler);
-    LimitControl.init(scheduler);
     MessageOutput.println("done");
     InverterSettings.init(scheduler);
 

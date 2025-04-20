@@ -24,7 +24,13 @@
                             {{ option.descr }}
                         </option>
                     </select>
-                </InputElement>             
+                </InputElement>
+
+                <InputElement :label="$t('fileadmin.Download')" type="noinput">
+                    <a href="#" class="icon" :title="$t('fileadmin.Download')">
+                                    <BIconDownload v-on:click="downloadFile('shelly_data.txt')" />
+                                </a>
+                </InputElement>
             </CardElement>
 
             <CardElement :text="$t('shellyadmin.ShellySet')" textVariant="text-bg-primary" add-space
@@ -60,6 +66,7 @@
                     </div>
                 </div>
             </CardElement>
+
             <FormFooter @reload="getShellyConfig" />
         </form>
     </BasePage>
@@ -73,7 +80,7 @@ import FormFooter from '@/components/FormFooter.vue';
 import InputElement from '@/components/InputElement.vue';
 import type { ShellyConfig } from "@/types/ShellyConfig";
 import { authHeader, handleResponse } from '@/utils/authentication';
-import { BIconInfoCircle } from 'bootstrap-icons-vue';
+import { BIconInfoCircle, BIconDownload } from 'bootstrap-icons-vue';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
@@ -84,6 +91,7 @@ export default defineComponent({
         FormFooter,
         InputElement,
         BIconInfoCircle,
+        BIconDownload,
     },
     data() {
         return {
@@ -153,6 +161,19 @@ export default defineComponent({
                         this.showAlert = true;
                     }
                 );
+        },
+        downloadFile(filename: string) {
+            fetch('/api/shelly/file', { headers: authHeader() })
+                .then((res) => res.blob())
+                .then((blob) => {
+                    const file = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = file;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                });
         },
     },
 });
