@@ -48,7 +48,7 @@ public:
     void init(Scheduler& scheduler);
     void loopFetch();
     void loopCalc();
-    IShellyClientData& getShellyData() { return *this; }
+    ShellyClientData& getShellyData() { return *this; }
 
     // IShellyWrapper
     virtual bool isReachable();

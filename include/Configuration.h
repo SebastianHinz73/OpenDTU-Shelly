@@ -44,7 +44,7 @@ private:
 
 class ConfigurationClass {
 public:
-    CONFIG_T const& get();
+    CONFIG_T& get();
 };
 #endif
 

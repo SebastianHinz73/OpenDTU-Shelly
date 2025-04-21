@@ -5,9 +5,10 @@
 #include "LimitControlCalculation.h"
 #include "Configuration.h"
 #include "MessageOutput.h"
+#include <string>
 #include <cfloat>
 
-LimitControlCalculation::LimitControlCalculation(IShellyClientData& shellyClientData, IShellyWrapper& shellyWrapper)
+LimitControlCalculation::LimitControlCalculation(ShellyClientData& shellyClientData, IShellyWrapper& shellyWrapper)
     : _shellyClientData(shellyClientData)
     , _shellyWrapper(shellyWrapper)
 {
@@ -37,8 +38,6 @@ void LimitControlCalculation::loop()
         _intervalPlugS = 20000; // 5000;
         return;
     }
-
-    MessageOutput.printf("calc %d Test\r\n", 123);
 
     bool bInv = _shellyWrapper.isReachable();
     if (!bInv) {

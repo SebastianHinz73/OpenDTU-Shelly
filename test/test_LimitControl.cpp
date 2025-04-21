@@ -6,11 +6,20 @@
 #include "Configuration.h"
 #include "LimitControlCalculation.h"
 #include "ShellyWrapperMock.h"
+#include <Configuration.h>
 #include <MessageOutput.h>
 #include <unity.h>
 
 void test_Limit1(void)
 {
+    CONFIG_T& config = Configuration.get();
+    config.Shelly.ShellyEnable = true;
+    config.Shelly.LimitEnable = true;
+    config.Shelly.MaxPower = 1600;
+    config.Shelly.MinPower = 150;
+    config.Shelly.TargetValue = 0;
+    config.Shelly.FeedInLevel = 85;
+
     ShellyWrapperMock shellyWrapperMock(1);
     shellyWrapperMock.run();
 

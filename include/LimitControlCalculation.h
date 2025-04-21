@@ -2,7 +2,7 @@
 #pragma once
 
 #include "IShellyWrapper.h"
-#include "IShellyClientData.h"
+#include "ShellyClientData.h"
 
 typedef struct {
     uint32_t _consecutiveCnt;
@@ -15,7 +15,7 @@ typedef struct {
 
 class LimitControlCalculation {
 public:
-    LimitControlCalculation(IShellyClientData& shellyClientData, IShellyWrapper& shellyWrapper);
+    LimitControlCalculation(ShellyClientData& shellyClientData, IShellyWrapper& shellyWrapper);
     void loop();
 
 private:
@@ -29,7 +29,7 @@ private:
     void HandleCnt(CalcLimitFunctionData_t& context);
 
 private:
-    IShellyClientData& _shellyClientData;
+    ShellyClientData& _shellyClientData;
     IShellyWrapper& _shellyWrapper;
 
     float _invLimitAbsolute;

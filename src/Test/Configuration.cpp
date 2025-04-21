@@ -9,7 +9,7 @@
 
 CONFIG_T config;
 
-CONFIG_T const& ConfigurationClass::get()
+CONFIG_T& ConfigurationClass::get()
 {
     return config;
 }
