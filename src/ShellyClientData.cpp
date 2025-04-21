@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Copyright (C) 2023 Sebastian Hinz
+ * Copyright (C) 2025 Sebastian Hinz
  */
 
 #include "ShellyClientData.h"
 #include "Configuration.h"
+#include "MessageOutput.h"
+
+#include "MessageOutput.h"
 #include <cfloat>
 
 ShellyClientData::ShellyClientData(ITimeLapse& timeLapse)
@@ -27,7 +30,12 @@ void ShellyClientData::Update(RamDataType_t type, float value)
 {
     std::lock_guard<std::mutex> lock(_mutex);
 
-    _ramBuffer->writeValue(type, _timeLapse.millis(), value);
+    auto now = _timeLapse.millis();
+    if (type == RamDataType_t::Pro3EM) {
+        MessageOutput.printf("## Pro3EM %.1f, %lu\r\n", value, now);
+    }
+
+    _ramBuffer->writeValue(type, now, value);
 }
 
 void ShellyClientData::Update(ShellyClientDataType_t type, std::string value)

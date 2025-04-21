@@ -41,7 +41,7 @@ public:
     uint32_t MaxInterval;
 };
 
-class ShellyClientClass : public ShellyClientData {
+class ShellyClientClass : public ShellyClientData, public LimitControlCalculation {
 public:
     ShellyClientClass();
     void init(Scheduler& scheduler);
@@ -61,7 +61,6 @@ private:
     Task _loopCalcTask;
     WebSocketData _Pro3EM;
     WebSocketData _PlugS;
-    LimitControlCalculation _calc;
 };
 
 extern ShellyClientClass ShellyClient;

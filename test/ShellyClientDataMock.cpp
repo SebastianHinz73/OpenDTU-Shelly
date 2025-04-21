@@ -1,85 +1,23 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Copyright (C) 2025 Sebastian Hinz
+ */
 #include "ShellyClientDataMock.h"
 #include <Config_t.h>
 #include <Configuration.h>
 #include <filesystem>
 #include <fstream>
-// #include <iostream>
-// #include <stdio.h>
+#include <cfloat>
 
-#define FLT_MAX 100000.
+//#define FLT_MAX 100000.
 
-unsigned long ShellyClientDataMock::millis()
-{
-    // https://stackoverflow.com/questions/17250932/how-to-get-the-time-elapsed-in-c-in-milliseconds-windows
-    return _myTime;
-}
-
-bool ShellyClientDataMock::OpenFile(std::string file)
-{
-    _file.open(file, std::fstream::binary);
-    if (!_file.is_open()) {
-        return false;
-    }
-    // L"test\\ShellyData\\shelly_data.bin"
-    /// std::ifstream f1(file, std::fstream::binary);
-
-    return true;
-}
-
-dataEntry_t* ShellyClientDataMock::getActualOrNext(bool bNext)
-{
-    static dataEntry_t entry {};
-    static bool bInit = false;
-    if (!bInit || bNext) {
-        bInit = true;
-
-        if (!_file.is_open() || _file.eof()) {
-            return nullptr;
-        }
-
-        uint16_t u16;
-        uint32_t u32;
-        float f32;
-
-        _file.read((char*)&u16, sizeof(uint16_t));
-        _file.read((char*)&u32, sizeof(uint32_t));
-        _file.read((char*)&f32, sizeof(float));
-
-        entry.type = (RamDataType_t)u16;
-        entry.time = u32;
-        entry.value = f32;
-    }
-    return &entry;
-}
-
-bool ShellyClientDataMock::loop()
-{
-    _myTime += 100;
-    auto now = millis();
-
-    dataEntry_t* act = getActualOrNext(false);
-    if (act == nullptr) {
-        return false;
-    }
-    while (act->time < now) {
-        if (act->type == RamDataType_t::Pro3EM) {
-            _ramBuffer->writeValue(act->type, act->time, act->value);
-            printf("Pro3EM: %1.f\n", act->value);
-        }
-        act = getActualOrNext(true);
-        if (act == nullptr) {
-            return false;
-        }
-    }
-    return true;
-}
-
-ShellyClientDataMock::ShellyClientDataMock()
+ShellyClientDataMock::ShellyClientDataMock(ITimeLapse& timeLapse)
+    : _timeLapse(timeLapse)
 {
     int ramDiskSize = 4096; // 7 * 60 Sekunden * 10 Bytes = 4200
     uint8_t* ramDisk = new uint8_t[ramDiskSize];
 
-    _ramBuffer = new RamBuffer(ramDisk, ramDiskSize, *this);
+    _ramBuffer = new RamBuffer(ramDisk, ramDiskSize, timeLapse);
     _ramBuffer->PowerOnInitialize();
 }
 
@@ -93,7 +31,7 @@ void ShellyClientDataMock::Update(RamDataType_t type, float value)
 {
     std::lock_guard<std::mutex> lock(_mutex);
 
-    _ramBuffer->writeValue(type, millis(), value);
+    _ramBuffer->writeValue(type, _timeLapse.millis(), value);
 }
 
 void ShellyClientDataMock::Update(ShellyClientDataType_t type, std::string value)
@@ -208,7 +146,7 @@ std::string& ShellyClientDataMock::GetDebug(ShellyClientDataType_t type, std::st
     return result;
 }
 
-bool ShellyClientDataMock::sendLimit(float limit)
+bool ShellyClientDataMock::sendLimit(float /*limit*/)
 {
     return true;
 }
@@ -216,4 +154,65 @@ bool ShellyClientDataMock::sendLimit(float limit)
 int ShellyClientDataMock::fetchChannelPower(float channelPower[])
 {
     return 0;
+}
+
+
+
+bool ShellyClientDataMock::OpenFile(std::string file)
+{
+    _file.open(file, std::fstream::binary);
+    if (!_file.is_open()) {
+        return false;
+    }
+    // L"test\\ShellyData\\shelly_data.bin"
+    /// std::ifstream f1(file, std::fstream::binary);
+
+    return true;
+}
+
+dataEntry_t* ShellyClientDataMock::getActualOrNext(bool bNext)
+{
+    static dataEntry_t entry {};
+    static bool bInit = false;
+    if (!bInit || bNext) {
+        bInit = true;
+
+        if (!_file.is_open() || _file.eof()) {
+            return nullptr;
+        }
+
+        uint16_t u16;
+        uint32_t u32;
+        float f32;
+
+        _file.read((char*)&u16, sizeof(uint16_t));
+        _file.read((char*)&u32, sizeof(uint32_t));
+        _file.read((char*)&f32, sizeof(float));
+
+        entry.type = (RamDataType_t)u16;
+        entry.time = u32;
+        entry.value = f32;
+    }
+    return &entry;
+}
+
+bool ShellyClientDataMock::loop()
+{
+    auto now = _timeLapse.millis();
+
+    dataEntry_t* act = getActualOrNext(false);
+    if (act == nullptr) {
+        return false;
+    }
+    while (act->time < now) {
+        if (act->type == RamDataType_t::Pro3EM) {
+            _ramBuffer->writeValue(act->type, act->time, act->value);
+            printf("Pro3EM: %.1f, %llu\n", act->value, act->time);
+        }
+        act = getActualOrNext(true);
+        if (act == nullptr) {
+            return false;
+        }
+    }
+    return true;
 }

@@ -54,6 +54,7 @@ ShellyClientClass ShellyClient;
 
 ShellyClientClass::ShellyClientClass()
     : ShellyClientData(hoymilesInterfaces)
+    , LimitControlCalculation(*this, hoymilesInterfaces)
     , _loopFetchTask(TASK_IMMEDIATE, TASK_FOREVER, std::bind(&ShellyClientClass::loopFetch, this))
     , _loopCalcTask(1 * TASK_SECOND, TASK_FOREVER, std::bind(&ShellyClientClass::loopCalc, this))
 {
@@ -89,7 +90,15 @@ void ShellyClientClass::loopFetch()
 
 void ShellyClientClass::loopCalc()
 {
-    _calc.loop(*this, hoymilesInterfaces, hoymilesInterfaces);
+    MessageOutput.printf("test %d\r\n");
+
+    // TestTracer("Trace2 test %d \r\n", 123);
+    //  tracer.printf("Trace test %d \r\n", 123);
+    //  Tracer("Trace2 test %d \r\n", 123);
+    //  Tracer("_Trace2 test %d \r\n", 123);
+    //  Tracer.func2();
+
+    LimitControlCalculation::loop(hoymilesInterfaces);
 }
 
 void ShellyClientClass::HandleWebsocket(WebSocketData& data, const char* hostname, std::function<void(WStype_t type, uint8_t* payload, size_t length)> cbEvent)

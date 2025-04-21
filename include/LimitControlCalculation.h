@@ -16,11 +16,11 @@ typedef struct {
 
 class LimitControlCalculation {
 public:
-    LimitControlCalculation();
-    void loop(IShellyClientData& shellyClientData, ILimitControlHoymiles& hoymiles, ITimeLapse& timeLapse);
+    LimitControlCalculation(IShellyClientData& shellyClientData, ITimeLapse& timeLapse);
+    void loop(ILimitControlHoymiles& hoymiles);
 
 private:
-    bool CalculateLimit(IShellyClientData& shellyClientData, float& limit);
+    bool CalculateLimit(float& limit);
     float CorrectChannelPower(float channelPower);
     float CheckBoundary(float limit);
 
@@ -30,6 +30,9 @@ private:
     void HandleCnt(CalcLimitFunctionData_t& context);
 
 private:
+    IShellyClientData& _shellyClientData;
+    ITimeLapse& _timeLapse;
+
     float _invLimitAbsolute;
     time_t _intervalPro3em;
     time_t _intervalPlugS;

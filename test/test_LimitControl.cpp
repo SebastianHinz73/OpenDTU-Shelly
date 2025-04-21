@@ -1,33 +1,24 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
- Copyright (c) 2014-present PlatformIO <contact@platformio.org>
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-**/
+ * Copyright (C) 2025 Sebastian Hinz
+ */
 
 #include "Configuration.h"
 #include "LimitControlCalculation.h"
 #include "ShellyClientDataMock.h"
+#include "TimeLapseMock.h"
 #include <unity.h>
 
 void test_abc(void)
 {
-    ShellyClientDataMock shellyMock;
-    LimitControlCalculation limitCalc;
+    TimeLapseMock timeLapse(1);
+    ShellyClientDataMock shellyMock(timeLapse);
+    LimitControlCalculation limitCalc(shellyMock, timeLapse);
 
     TEST_ASSERT_EQUAL(true, shellyMock.OpenFile("test\\ShellyData\\shelly_data3.bin"));
 
     while (shellyMock.loop()) {
-        limitCalc.loop(shellyMock, shellyMock, shellyMock);
+        limitCalc.loop(shellyMock);
     }
 
     TEST_ASSERT_EQUAL(32, 32);

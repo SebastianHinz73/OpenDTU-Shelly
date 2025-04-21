@@ -4,28 +4,31 @@
  */
 #include "LimitControlCalculation.h"
 #include "Configuration.h"
+#include "MessageOutput.h"
 #include <cfloat>
 
-LimitControlCalculation::LimitControlCalculation()
+LimitControlCalculation::LimitControlCalculation(IShellyClientData& shellyClientData, ITimeLapse& timeLapse)
+    : _shellyClientData(shellyClientData)
+    , _timeLapse(timeLapse)
 {
     _intervalPro3em = 20000;
     _intervalPlugS = 20000;
 }
 
-void LimitControlCalculation::loop(IShellyClientData& shellyClientData, ILimitControlHoymiles& hoymiles, ITimeLapse& timeLapse)
+void LimitControlCalculation::loop(ILimitControlHoymiles& hoymiles)
 {
-    float valueMax = shellyClientData.GetMaxValue(RamDataType_t::Pro3EM, _intervalPro3em);
-    shellyClientData.Update(RamDataType_t::Pro3EM_Max, valueMax);
+    float valueMax = _shellyClientData.GetMaxValue(RamDataType_t::Pro3EM, _intervalPro3em);
+    _shellyClientData.Update(RamDataType_t::Pro3EM_Max, valueMax);
 
-    float valueMin = shellyClientData.GetMinValue(RamDataType_t::Pro3EM, _intervalPro3em);
-    shellyClientData.Update(RamDataType_t::Pro3EM_Min, valueMin);
+    float valueMin = _shellyClientData.GetMinValue(RamDataType_t::Pro3EM, _intervalPro3em);
+    _shellyClientData.Update(RamDataType_t::Pro3EM_Min, valueMin);
     _debugPro3em = "[" + std::to_string(static_cast<int>(valueMin)) + "," + std::to_string(static_cast<int>(valueMax)) + "]";
 
-    valueMax = shellyClientData.GetMaxValue(RamDataType_t::PlugS, _intervalPro3em);
-    shellyClientData.Update(RamDataType_t::PlugS_Max, valueMax);
+    valueMax = _shellyClientData.GetMaxValue(RamDataType_t::PlugS, _intervalPro3em);
+    _shellyClientData.Update(RamDataType_t::PlugS_Max, valueMax);
 
-    valueMin = shellyClientData.GetMinValue(RamDataType_t::PlugS, _intervalPro3em);
-    shellyClientData.Update(RamDataType_t::PlugS_Min, valueMin);
+    valueMin = _shellyClientData.GetMinValue(RamDataType_t::PlugS, _intervalPro3em);
+    _shellyClientData.Update(RamDataType_t::PlugS_Min, valueMin);
     _debugPlugS = "[" + std::to_string(static_cast<int>(valueMin)) + "," + std::to_string(static_cast<int>(valueMax)) + "]";
 
     const CONFIG_T& config = Configuration.get();
@@ -35,29 +38,32 @@ void LimitControlCalculation::loop(IShellyClientData& shellyClientData, ILimitCo
         return;
     }
 
+    MessageOutput.printf("calc %d Test\r\n", 123);
+
     bool bInv = hoymiles.isReachable();
     if (!bInv) {
-        shellyClientData.Update(ShellyClientDataType_t::CalulatedLimit, "!inv->isReachable()");
+        _shellyClientData.Update(ShellyClientDataType_t::CalulatedLimit, "!inv->isReachable()");
     } else {
         _channelCnt = hoymiles.fetchChannelPower(_channelPower);
     }
 
     float limit = 0;
-    if (CalculateLimit(shellyClientData, limit) && bInv && timeLapse.millis() - _lastLimitSend > 10 * TASK_SECOND) {
+    if (CalculateLimit(limit) && bInv && _timeLapse.millis() - _lastLimitSend > 10 * TASK_SECOND) {
+
         if (hoymiles.sendLimit(limit)) {
             _actLimit = limit;
-            _lastLimitSend = timeLapse.millis();
-            shellyClientData.Update(RamDataType_t::Limit, limit);
+            _lastLimitSend = _timeLapse.millis();
+            _shellyClientData.Update(RamDataType_t::Limit, limit);
         }
     }
 }
 
-bool LimitControlCalculation::CalculateLimit(IShellyClientData& shellyClientData, float& limit)
+bool LimitControlCalculation::CalculateLimit(float& limit)
 {
     const CONFIG_T& config = Configuration.get();
 
-    float gridPower = shellyClientData.GetFactoredValue(RamDataType_t::Pro3EM, _intervalPro3em);
-    float generatedPower = shellyClientData.GetFactoredValue(RamDataType_t::PlugS, _intervalPlugS);
+    float gridPower = _shellyClientData.GetFactoredValue(RamDataType_t::Pro3EM, _intervalPro3em);
+    float generatedPower = _shellyClientData.GetFactoredValue(RamDataType_t::PlugS, _intervalPlugS);
     _debugPro3em += std::to_string(static_cast<int>(gridPower)) + ", " + std::to_string(static_cast<int>(_intervalPro3em / 1000)) + " ";
     _debugPlugS += std::to_string(static_cast<int>(generatedPower)) + ", " + std::to_string(static_cast<int>(_intervalPlugS / 1000)) + " ";
 
@@ -72,16 +78,16 @@ bool LimitControlCalculation::CalculateLimit(IShellyClientData& shellyClientData
         limit = Optimize(_dataOptimize);
     }
 
-    shellyClientData.Update(RamDataType_t::Limit, _actLimit); // update
+    _shellyClientData.Update(RamDataType_t::Limit, _actLimit); // update
 
-    shellyClientData.Update(ShellyClientDataType_t::Pro3EM, _debugPro3em);
-    shellyClientData.Update(ShellyClientDataType_t::PlugS, _debugPlugS);
+    _shellyClientData.Update(ShellyClientDataType_t::Pro3EM, _debugPro3em);
+    _shellyClientData.Update(ShellyClientDataType_t::PlugS, _debugPlugS);
 
     if (limit == -FLT_MAX) {
-        shellyClientData.Update(RamDataType_t::CalulatedLimit, shellyClientData.GetActValue(RamDataType_t::CalulatedLimit)); // update
+        _shellyClientData.Update(RamDataType_t::CalulatedLimit, _shellyClientData.GetActValue(RamDataType_t::CalulatedLimit)); // update
         return false;
     }
-    shellyClientData.Update(RamDataType_t::CalulatedLimit, limit);
+    _shellyClientData.Update(RamDataType_t::CalulatedLimit, limit);
 
     return true;
 }
@@ -180,9 +186,10 @@ float LimitControlCalculation::CorrectChannelPower(float neededPower)
 float LimitControlCalculation::CheckBoundary(float limit)
 {
     const CONFIG_T& config = Configuration.get();
+    int32_t minPower = static_cast<int32_t>(config.Shelly.MinPower);
 
-    if (config.Shelly.MinPower > config.Shelly.TargetValue && limit < config.Shelly.MinPower - config.Shelly.TargetValue) {
-        limit = config.Shelly.MinPower - config.Shelly.TargetValue;
+    if (minPower > config.Shelly.TargetValue && limit < minPower - config.Shelly.TargetValue) {
+        limit = minPower - config.Shelly.TargetValue;
     }
 
     if (limit > config.Shelly.MaxPower) {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Copyright (C) 2024 Sebastian Hinz
+ * Copyright (C) 2025 Sebastian Hinz
  */
 
 #include "RamBuffer.h"

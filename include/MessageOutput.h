@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
+#ifdef ARDUINO
 #include <AsyncWebSocket.h>
 #include <HardwareSerial.h>
 #include <Stream.h>
@@ -32,3 +33,13 @@ private:
 };
 
 extern MessageOutputClass MessageOutput;
+
+#else
+
+class MessageOutputClass {
+public:
+    void printf(const char* format, ...) __attribute__((format(printf, 2, 3)));
+};
+extern MessageOutputClass MessageOutput;
+
+#endif
