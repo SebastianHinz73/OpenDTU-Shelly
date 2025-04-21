@@ -3,64 +3,21 @@
  * Copyright (C) 2025 Sebastian Hinz
  */
 
-#include "ShellyClient.h"
-#include "ILimitControlHoymiles.h"
+#include "ShellyWrapper.h"
 #include "MessageOutput.h"
 #include <Hoymiles.h>
 
-class HoymilesInterface : public ILimitControlHoymiles, public ITimeLapse {
-public:
-    virtual ~HoymilesInterface() { }
+ShellyWrapperClass ShellyWrapper;
 
-private:
-    virtual bool isReachable()
-    {
-        auto inv = Hoymiles.getInverterByPos(0);
-        return inv != nullptr && inv->isReachable();
-    }
-    virtual bool sendLimit(float limit)
-    {
-        auto inv = Hoymiles.getInverterByPos(0);
-        return inv && inv->sendActivePowerControlRequest(limit, PowerLimitControlType::AbsolutNonPersistent);
-    }
-    virtual int fetchChannelPower(float channelPower[])
-    {
-        int channelCnt = 0;
-        auto inv = Hoymiles.getInverterByPos(0);
-        if (inv) {
-            String limit = "(";
-            for (auto& c : inv->Statistics()->getChannelsByType(TYPE_DC)) {
-                if (inv->Statistics()->getStringMaxPower(c) > 0) {
-                    auto power = inv->Statistics()->getChannelFieldValue(TYPE_DC, c, FLD_PDC);
-                    channelPower[c] = power;
-                    channelCnt++;
-                    limit += String(static_cast<int>(power)) + ",";
-                }
-            }
-            limit += ")";
-        }
-        return channelCnt;
-    }
-
-    virtual unsigned long millis()
-    {
-        return ::millis();
-    }
-};
-
-HoymilesInterface hoymilesInterfaces;
-
-ShellyClientClass ShellyClient;
-
-ShellyClientClass::ShellyClientClass()
-    : ShellyClientData(hoymilesInterfaces)
-    , LimitControlCalculation(*this, hoymilesInterfaces)
-    , _loopFetchTask(TASK_IMMEDIATE, TASK_FOREVER, std::bind(&ShellyClientClass::loopFetch, this))
-    , _loopCalcTask(1 * TASK_SECOND, TASK_FOREVER, std::bind(&ShellyClientClass::loopCalc, this))
+ShellyWrapperClass::ShellyWrapperClass()
+    : ShellyClientData(*((IShellyWrapper*)this))
+    , LimitControlCalculation(*this, *this)
+    , _loopFetchTask(TASK_IMMEDIATE, TASK_FOREVER, std::bind(&ShellyWrapperClass::loopFetch, this))
+    , _loopCalcTask(1 * TASK_SECOND, TASK_FOREVER, std::bind(&ShellyWrapperClass::loopCalc, this))
 {
 }
 
-void ShellyClientClass::init(Scheduler& scheduler)
+void ShellyWrapperClass::init(Scheduler& scheduler)
 {
     scheduler.addTask(_loopFetchTask);
     _loopFetchTask.enable();
@@ -74,7 +31,7 @@ void ShellyClientClass::init(Scheduler& scheduler)
     _PlugS.MaxInterval = 5000;
 }
 
-void ShellyClientClass::loopFetch()
+void ShellyWrapperClass::loopFetch()
 {
     while (WiFi.status() != WL_CONNECTED) {
         return;
@@ -84,24 +41,17 @@ void ShellyClientClass::loopFetch()
     // }
     const CONFIG_T& config = Configuration.get();
 
-    HandleWebsocket(_Pro3EM, config.Shelly.Hostname_Pro3EM, ShellyClientClass::EventsPro3EM);
-    HandleWebsocket(_PlugS, config.Shelly.Hostname_PlugS, ShellyClientClass::EventsPlugS);
+    HandleWebsocket(_Pro3EM, config.Shelly.Hostname_Pro3EM, ShellyWrapperClass::EventsPro3EM);
+    HandleWebsocket(_PlugS, config.Shelly.Hostname_PlugS, ShellyWrapperClass::EventsPlugS);
 }
 
-void ShellyClientClass::loopCalc()
+void ShellyWrapperClass::loopCalc()
 {
-    MessageOutput.printf("test %d\r\n");
-
-    // TestTracer("Trace2 test %d \r\n", 123);
-    //  tracer.printf("Trace test %d \r\n", 123);
-    //  Tracer("Trace2 test %d \r\n", 123);
-    //  Tracer("_Trace2 test %d \r\n", 123);
-    //  Tracer.func2();
-
-    LimitControlCalculation::loop(hoymilesInterfaces);
+    MessageOutput.printf("test %d\r\n", 123);
+    LimitControlCalculation::loop();
 }
 
-void ShellyClientClass::HandleWebsocket(WebSocketData& data, const char* hostname, std::function<void(WStype_t type, uint8_t* payload, size_t length)> cbEvent)
+void ShellyWrapperClass::HandleWebsocket(WebSocketData& data, const char* hostname, std::function<void(WStype_t type, uint8_t* payload, size_t length)> cbEvent)
 {
     const CONFIG_T& config = Configuration.get();
     unsigned long nowMillis = millis();
@@ -149,17 +99,17 @@ void ShellyClientClass::HandleWebsocket(WebSocketData& data, const char* hostnam
     }
 }
 
-void ShellyClientClass::EventsPro3EM(WStype_t type, uint8_t* payload, size_t length)
+void ShellyWrapperClass::EventsPro3EM(WStype_t type, uint8_t* payload, size_t length)
 {
-    ShellyClient.Events(ShellyClient._Pro3EM, type, payload, length);
+    ShellyWrapper.Events(ShellyWrapper._Pro3EM, type, payload, length);
 }
 
-void ShellyClientClass::EventsPlugS(WStype_t type, uint8_t* payload, size_t length)
+void ShellyWrapperClass::EventsPlugS(WStype_t type, uint8_t* payload, size_t length)
 {
-    ShellyClient.Events(ShellyClient._PlugS, type, payload, length);
+    ShellyWrapper.Events(ShellyWrapper._PlugS, type, payload, length);
 }
 
-void ShellyClientClass::Events(WebSocketData& data, WStype_t type, uint8_t* payload, size_t length)
+void ShellyWrapperClass::Events(WebSocketData& data, WStype_t type, uint8_t* payload, size_t length)
 {
     switch (type) {
     case WStype_DISCONNECTED:
@@ -209,4 +159,40 @@ void ShellyClientClass::Events(WebSocketData& data, WStype_t type, uint8_t* payl
     std::lock_guard<std::mutex> lock(_mutex);
     data.LastTime = millis();
     data.UpdatedTime = data.LastTime;
+}
+
+bool ShellyWrapperClass::isReachable()
+{
+    auto inv = Hoymiles.getInverterByPos(0);
+    return inv != nullptr && inv->isReachable();
+}
+
+bool ShellyWrapperClass::sendLimit(float limit)
+{
+    auto inv = Hoymiles.getInverterByPos(0);
+    return inv && inv->sendActivePowerControlRequest(limit, PowerLimitControlType::AbsolutNonPersistent);
+}
+
+int ShellyWrapperClass::fetchChannelPower(float channelPower[])
+{
+    int channelCnt = 0;
+    auto inv = Hoymiles.getInverterByPos(0);
+    if (inv) {
+        String limit = "(";
+        for (auto& c : inv->Statistics()->getChannelsByType(TYPE_DC)) {
+            if (inv->Statistics()->getStringMaxPower(c) > 0) {
+                auto power = inv->Statistics()->getChannelFieldValue(TYPE_DC, c, FLD_PDC);
+                channelPower[c] = power;
+                channelCnt++;
+                limit += String(static_cast<int>(power)) + ",";
+            }
+        }
+        limit += ")";
+    }
+    return channelCnt;
+}
+
+unsigned long ShellyWrapperClass::millis()
+{
+    return ::millis();
 }

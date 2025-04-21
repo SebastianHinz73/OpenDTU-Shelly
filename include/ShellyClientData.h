@@ -2,10 +2,10 @@
 #pragma once
 
 #include "IShellyClientData.h"
-#include "ITimeLapse.h"
+#include "IShellyWrapper.h"
 #include "RamBuffer.h"
-#include <Arduino.h>
 #include <mutex>
+#include <string.h>
 
 class ShellyClientData : public IShellyClientData {
 public:

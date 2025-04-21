@@ -6,8 +6,6 @@
 #include "ShellyClientData.h"
 #include "Configuration.h"
 #include "MessageOutput.h"
-
-#include "MessageOutput.h"
 #include <cfloat>
 
 ShellyClientData::ShellyClientData(ITimeLapse& timeLapse)
@@ -142,7 +140,7 @@ void ShellyClientData::BackupAll(size_t& fileSize, ResponseFiller& responseFille
     static dataEntry_t* act;
     act = nullptr;
 
-    responseFiller = [&](uint8_t* buffer, size_t maxLen, size_t alreadySent, size_t fileSize) -> size_t {
+    responseFiller = [&](uint8_t* buffer, size_t maxLen, size_t /*alreadySent*/, size_t /*fileSize*/) -> size_t {
         size_t ret = 0;
         size_t maxCnt = maxLen / sizeof(dataEntry_t);
 

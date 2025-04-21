@@ -4,6 +4,7 @@
 #include "Configuration.h"
 #include "LimitControlCalculation.h"
 #include "ShellyClientData.h"
+#include "IShellyWrapper.h"
 #include <ArduinoJson.h>
 #include <TaskSchedulerDeclarations.h>
 #include <WebSocketsClient.h>
@@ -41,13 +42,19 @@ public:
     uint32_t MaxInterval;
 };
 
-class ShellyClientClass : public ShellyClientData, public LimitControlCalculation {
+class ShellyWrapperClass : public ShellyClientData, public LimitControlCalculation, IShellyWrapper {
 public:
-    ShellyClientClass();
+    ShellyWrapperClass();
     void init(Scheduler& scheduler);
     void loopFetch();
     void loopCalc();
     IShellyClientData& getShellyData() { return *this; }
+
+    // IShellyWrapper
+    virtual bool isReachable();
+    virtual bool sendLimit(float limit);
+    virtual int fetchChannelPower(float channelPower[]);
+    virtual unsigned long millis();
 
 private:
     void HandleWebsocket(WebSocketData& data, const char* hostname, std::function<void(WStype_t type, uint8_t* payload, size_t length)> cbEvent);
@@ -63,4 +70,4 @@ private:
     WebSocketData _PlugS;
 };
 
-extern ShellyClientClass ShellyClient;
+extern ShellyWrapperClass ShellyWrapper;

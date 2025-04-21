@@ -19,7 +19,7 @@
 #include "PinMapping.h"
 #include "RestartHelper.h"
 #include "Scheduler.h"
-#include "ShellyClient.h"
+#include "ShellyWrapper.h"
 #include "SunPosition.h"
 #include "Utils.h"
 #include "WebApi.h"
@@ -151,7 +151,7 @@ void setup()
     MessageOutput.println("done");
 
     MessageOutput.print("Initialize Shelly... ");
-    ShellyClient.init(scheduler);
+    ShellyWrapper.init(scheduler);
     MessageOutput.println("done");
     InverterSettings.init(scheduler);
 

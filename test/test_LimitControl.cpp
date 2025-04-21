@@ -5,21 +5,14 @@
 
 #include "Configuration.h"
 #include "LimitControlCalculation.h"
-#include "ShellyClientDataMock.h"
-#include "TimeLapseMock.h"
+#include "ShellyWrapperMock.h"
+#include <MessageOutput.h>
 #include <unity.h>
 
-void test_abc(void)
+void test_Limit1(void)
 {
-    TimeLapseMock timeLapse(1);
-    ShellyClientDataMock shellyMock(timeLapse);
-    LimitControlCalculation limitCalc(shellyMock, timeLapse);
-
-    TEST_ASSERT_EQUAL(true, shellyMock.OpenFile("test\\ShellyData\\shelly_data3.bin"));
-
-    while (shellyMock.loop()) {
-        limitCalc.loop(shellyMock);
-    }
+    ShellyWrapperMock shellyWrapperMock(1);
+    shellyWrapperMock.run();
 
     TEST_ASSERT_EQUAL(32, 32);
 }
@@ -29,6 +22,6 @@ void test_abc(void)
 void test_LimitControl()
 {
     UNITY_BEGIN();
-    RUN_TEST(test_abc);
+    RUN_TEST(test_Limit1);
     UNITY_END();
 }

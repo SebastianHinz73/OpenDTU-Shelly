@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
-#include "ILimitControlHoymiles.h"
+#include "IShellyWrapper.h"
 #include "IShellyClientData.h"
-#include "ITimeLapse.h"
 
 typedef struct {
     uint32_t _consecutiveCnt;
@@ -16,8 +15,8 @@ typedef struct {
 
 class LimitControlCalculation {
 public:
-    LimitControlCalculation(IShellyClientData& shellyClientData, ITimeLapse& timeLapse);
-    void loop(ILimitControlHoymiles& hoymiles);
+    LimitControlCalculation(IShellyClientData& shellyClientData, IShellyWrapper& shellyWrapper);
+    void loop();
 
 private:
     bool CalculateLimit(float& limit);
@@ -31,7 +30,7 @@ private:
 
 private:
     IShellyClientData& _shellyClientData;
-    ITimeLapse& _timeLapse;
+    IShellyWrapper& _shellyWrapper;
 
     float _invLimitAbsolute;
     time_t _intervalPro3em;

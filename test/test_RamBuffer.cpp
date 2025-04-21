@@ -154,7 +154,7 @@ void test_getNextEntry()
     int i = 0;
     dataEntry_t* act = nullptr;
     while (buffer.getNextEntry(act)) {
-        printf("act: %d, %.1f\n", act->type, act->value);
+        printf("act: %d, %.1f\n", (int)act->type, act->value);
         i++;
     }
     TEST_ASSERT_EQUAL(i, 20);

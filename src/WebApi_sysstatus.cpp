@@ -6,7 +6,7 @@
 #include "Configuration.h"
 #include "NetworkSettings.h"
 #include "PinMapping.h"
-#include "ShellyClient.h"
+#include "ShellyWrapper.h"
 #include "WebApi.h"
 #include "__compiled_constants.h"
 #include <AsyncJson.h>
@@ -60,7 +60,9 @@ void WebApiSysstatusClass::onSystemStatus(AsyncWebServerRequest* request)
     };
     for (char const* task_name : task_names) {
         TaskHandle_t const handle = xTaskGetHandle(task_name);
-        if (!handle) { continue; }
+        if (!handle) {
+            continue;
+        }
         JsonObject task = taskDetails.add<JsonObject>();
         task["name"] = task_name;
         task["stack_watermark"] = uxTaskGetStackHighWaterMark(handle);

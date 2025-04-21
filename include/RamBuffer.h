@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
-#include "ITimeLapse.h"
+#include "IShellyWrapper.h"
 #include "RamDataType.h"
 #include <functional>
 

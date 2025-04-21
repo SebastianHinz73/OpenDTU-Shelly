@@ -10,8 +10,8 @@
 #include <AsyncJson.h>
 #include <Hoymiles.h>
 #include <MessageOutput.h>
-#include <ShellyClient.h>
 #include <ShellyClientData.h>
+#include <ShellyWrapper.h>
 
 WebApiShellyClass::WebApiShellyClass()
 {
@@ -176,7 +176,7 @@ void WebApiShellyClass::onShellyFileGet(AsyncWebServerRequest* request)
     static size_t fileSize = 0;
     static ResponseFiller responseFiller;
 
-    auto& data = ShellyClient.getShellyData();
+    auto& data = ShellyWrapper.getShellyData();
     data.BackupAll(fileSize, responseFiller);
 
     AsyncWebServerResponse* response = request->beginResponse("application/octet-stream", fileSize, [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {

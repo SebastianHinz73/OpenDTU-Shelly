@@ -5,7 +5,7 @@
 #include "WebApi_ws_live.h"
 #include "Datastore.h"
 #include "MessageOutput.h"
-#include "ShellyClient.h"
+#include "ShellyWrapper.h"
 #include "SunPosition.h"
 #include "Utils.h"
 #include "WebApi.h"
@@ -155,7 +155,7 @@ void WebApiWsLiveClass::generateCommonJsonResponse(JsonVariant& root)
 void WebApiWsLiveClass::generateShellyCardJsonResponse(JsonVariant& root, ShellyViewOptions viewOptions)
 {
     JsonObject shellyCards = root["cards"].to<JsonObject>();
-    IShellyClientData& shellyData = ShellyClient.getShellyData();
+    IShellyClientData& shellyData = ShellyWrapper.getShellyData();
 
     shellyCards["pro3em_value"] = shellyData.GetActValue(RamDataType_t::Pro3EM);
     shellyCards["plugs_value"] = shellyData.GetActValue(RamDataType_t::PlugS);
@@ -418,7 +418,7 @@ void WebApiWsLiveClass::onGraphUpdate(AsyncWebServerRequest* request)
         auto& root = response->getRoot();
 
         const CONFIG_T& config = Configuration.get();
-        IShellyClientData& shellyData = ShellyClient.getShellyData();
+        IShellyClientData& shellyData = ShellyWrapper.getShellyData();
 
         ShellyViewOptions viewOptions = static_cast<ShellyViewOptions>(config.Shelly.ViewOption);
         if (viewOptions >= ShellyViewOptions::SimpleInfo) {

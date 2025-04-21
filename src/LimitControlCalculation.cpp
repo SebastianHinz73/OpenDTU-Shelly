@@ -7,15 +7,15 @@
 #include "MessageOutput.h"
 #include <cfloat>
 
-LimitControlCalculation::LimitControlCalculation(IShellyClientData& shellyClientData, ITimeLapse& timeLapse)
+LimitControlCalculation::LimitControlCalculation(IShellyClientData& shellyClientData, IShellyWrapper& shellyWrapper)
     : _shellyClientData(shellyClientData)
-    , _timeLapse(timeLapse)
+    , _shellyWrapper(shellyWrapper)
 {
     _intervalPro3em = 20000;
     _intervalPlugS = 20000;
 }
 
-void LimitControlCalculation::loop(ILimitControlHoymiles& hoymiles)
+void LimitControlCalculation::loop()
 {
     float valueMax = _shellyClientData.GetMaxValue(RamDataType_t::Pro3EM, _intervalPro3em);
     _shellyClientData.Update(RamDataType_t::Pro3EM_Max, valueMax);
@@ -40,19 +40,19 @@ void LimitControlCalculation::loop(ILimitControlHoymiles& hoymiles)
 
     MessageOutput.printf("calc %d Test\r\n", 123);
 
-    bool bInv = hoymiles.isReachable();
+    bool bInv = _shellyWrapper.isReachable();
     if (!bInv) {
         _shellyClientData.Update(ShellyClientDataType_t::CalulatedLimit, "!inv->isReachable()");
     } else {
-        _channelCnt = hoymiles.fetchChannelPower(_channelPower);
+        _channelCnt = _shellyWrapper.fetchChannelPower(_channelPower);
     }
 
     float limit = 0;
-    if (CalculateLimit(limit) && bInv && _timeLapse.millis() - _lastLimitSend > 10 * TASK_SECOND) {
+    if (CalculateLimit(limit) && bInv && _shellyWrapper.millis() - _lastLimitSend > 10 * TASK_SECOND) {
 
-        if (hoymiles.sendLimit(limit)) {
+        if (_shellyWrapper.sendLimit(limit)) {
             _actLimit = limit;
-            _lastLimitSend = _timeLapse.millis();
+            _lastLimitSend = _shellyWrapper.millis();
             _shellyClientData.Update(RamDataType_t::Limit, limit);
         }
     }
