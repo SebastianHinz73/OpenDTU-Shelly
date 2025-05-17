@@ -1,0 +1,12 @@
+[submodule "test/websocketpp"]
+	path = test/websocketpp
+	url = https://github.com/zaphoyd/websocketpp.git
+[submodule "test/asio"]
+	path = test/asio
+	url = https://github.com/chriskohlhoff/asio.git
+[submodule "test/external/asio"]
+	path = test/external/asio
+	url = https://github.com/chriskohlhoff/asio.git
+[submodule "test/external/websocketpp"]
+	path = test/external/websocketpp
+	url = https://github.com/zaphoyd/websocketpp.git
