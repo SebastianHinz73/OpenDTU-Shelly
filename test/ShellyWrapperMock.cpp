@@ -5,6 +5,7 @@
 
 #include "ShellyWrapperMock.h"
 #include <MessageOutput.h>
+#include <iostream>
 
 ShellyWrapperMock::ShellyWrapperMock(float factor)
     : ShellyClientData(*((IShellyWrapper*)this))
@@ -12,20 +13,23 @@ ShellyWrapperMock::ShellyWrapperMock(float factor)
     , _factor(factor)
 {
     ftime(&_Start);
+    init(false); // ShellyClientData
 }
 
 ShellyWrapperMock::~ShellyWrapperMock()
 {
 }
 
-void ShellyWrapperMock::run()
+bool ShellyWrapperMock::runFile(std::string filename, std::function<void(const dataEntry_t& data)> updateWebserver)
 {
     auto lastCalc = millis();
     auto lastData = millis();
-    float lastValue = 0;
 
-    OpenFile("test\\ShellyData\\shelly_data3.bin");
-    MessageOutput.printf("OpenFile\r\n");
+    if (!OpenFile(filename)) {
+        std::cout << "Can not open %s" << filename << std::endl;
+        return false;
+    }
+    std::cout << "Open file " << filename << std::endl;
 
     while (_file.is_open() && !_file.eof()) {
         // frames from file ?
@@ -39,9 +43,12 @@ void ShellyWrapperMock::run()
             if (act->time > now) {
                 break;
             }
+            if (updateWebserver != nullptr) {
+                updateWebserver(*act);
+            }
+
             ShellyClientData::Update(act->type, act->value);
             lastData = now;
-            lastValue = act->value;
 
             fflush(stdout);
         }
@@ -49,7 +56,8 @@ void ShellyWrapperMock::run()
         // update
         if (now - lastData > TASK_SECOND) {
             lastData = now;
-            ShellyClientData::Update(RamDataType_t::Pro3EM, lastValue);
+            ShellyClientData::Update(RamDataType_t::Pro3EM, ShellyClientData::GetActValue(RamDataType_t::Pro3EM));
+            ShellyClientData::Update(RamDataType_t::PlugS, ShellyClientData::GetActValue(RamDataType_t::PlugS));
         }
 
         // Calculate ?
@@ -58,6 +66,7 @@ void ShellyWrapperMock::run()
             LimitControlCalculation::loop();
         }
     }
+    return true;
 }
 
 bool ShellyWrapperMock::OpenFile(std::string file)
@@ -98,14 +107,82 @@ dataEntry_t* ShellyWrapperMock::getActualOrNext(bool bNext)
     return &entry;
 }
 
-bool ShellyWrapperMock::sendLimit(float /*limit*/)
+void ShellyWrapperMock::runTestData(TestEntry_t data[], int size, std::function<void(const TestEntry_t& act)> checkFunc)
 {
+    auto lastCalc = millis();
+    auto lastData = millis();
+
+    for (TestEntry_t* act = data; act < &data[size]; act++) {
+        auto now = millis();
+        bool newDataProcessed = false;
+
+        for (; act < &data[size]; act++) {
+            if (act->time * 1000 > now) {
+                act--;
+                break;
+            }
+
+            float plugS = ShellyClientData::GetActValue(RamDataType_t::PlugS);
+            ShellyClientData::Update(RamDataType_t::Pro3EM, act->value - plugS);
+            lastData = now;
+
+            newDataProcessed = true;
+        }
+
+        // update
+        if (now - lastData > TASK_SECOND) {
+            lastData = now;
+
+            ShellyClientData::Update(RamDataType_t::Pro3EM, ShellyClientData::GetActValue(RamDataType_t::Pro3EM));
+            ShellyClientData::Update(RamDataType_t::PlugS, ShellyClientData::GetActValue(RamDataType_t::PlugS));
+        }
+
+        // Calculate ?
+        if (now - lastCalc > TASK_SECOND) {
+            lastCalc = now;
+            LimitControlCalculation::loop();
+            _CalcLimit = ShellyClientData::GetActValue(RamDataType_t::CalulatedLimit);
+        }
+        if (newDataProcessed && checkFunc && act < &data[size]) {
+            checkFunc(*act);
+        }
+        fflush(stdout);
+    }
+}
+
+void ShellyWrapperMock::setChannelPower(float c1, float c2, float c3, float c4)
+{
+    _MaxChannelPower[0] = c1;
+    _MaxChannelPower[1] = c2;
+    _MaxChannelPower[2] = c3;
+    _MaxChannelPower[3] = c4;
+    for (int i = 0; i < 4; i++) {
+        _ChannelPower[i] = _MaxChannelPower[i];
+    }
+}
+
+bool ShellyWrapperMock::sendLimit(float limit)
+{
+    MessageOutput.printf("##############sendLimit %f\r\n", limit);
+
+    _Limit = limit;
+
+    limit /= 4;
+    float sum = 0;
+    for (int i = 0; i < 4; i++) {
+        _ChannelPower[i] = std::min(limit, _MaxChannelPower[i]);
+        sum += _ChannelPower[i];
+    }
+    ShellyClientData::Update(RamDataType_t::PlugS, sum);
     return true;
 }
 
 int ShellyWrapperMock::fetchChannelPower(float channelPower[])
 {
-    return 0;
+    for (int i = 0; i < 4; i++) {
+        channelPower[i] = _ChannelPower[i];
+    }
+    return 4;
 }
 
 unsigned long ShellyWrapperMock::millis()

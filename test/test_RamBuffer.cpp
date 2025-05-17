@@ -102,7 +102,7 @@ void test_full(void)
         i--;
     });
 
-    TEST_ASSERT_EQUAL(5, buffer.getUsedElements());
+    TEST_ASSERT_EQUAL(4, buffer.getUsedElements());
 }
 
 void test_time()

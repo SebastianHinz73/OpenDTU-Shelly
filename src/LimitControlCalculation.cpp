@@ -5,8 +5,8 @@
 #include "LimitControlCalculation.h"
 #include "Configuration.h"
 #include "MessageOutput.h"
-#include <string>
 #include <cfloat>
+#include <string>
 
 LimitControlCalculation::LimitControlCalculation(ShellyClientData& shellyClientData, IShellyWrapper& shellyWrapper)
     : _shellyClientData(shellyClientData)
@@ -83,10 +83,12 @@ bool LimitControlCalculation::CalculateLimit(float& limit)
     _shellyClientData.Update(ShellyClientDataType_t::PlugS, _debugPlugS);
 
     if (limit == -FLT_MAX) {
+        // MessageOutput.printf("CalulatedLimit %.1f\r\n", _shellyClientData.GetActValue(RamDataType_t::CalulatedLimit));
         _shellyClientData.Update(RamDataType_t::CalulatedLimit, _shellyClientData.GetActValue(RamDataType_t::CalulatedLimit)); // update
         return false;
     }
     _shellyClientData.Update(RamDataType_t::CalulatedLimit, limit);
+    // MessageOutput.printf("CalulatedLimit %.1f\r\n", limit);
 
     return true;
 }
@@ -97,8 +99,15 @@ float LimitControlCalculation::Increase(CalcLimitFunctionData_t& context, float 
     HandleCnt(context);
 
     float limit = abs(gridPower - config.Shelly.TargetValue);
-    limit *= 0.75;
-    limit += _actLimit;
+
+    if (_dataIncrease._consecutiveCnt < 25) {
+        limit *= 0.75;
+        limit += _actLimit;
+    } else {
+        limit = config.Shelly.MaxPower;
+    }
+
+    MessageOutput.printf("Increase %d: %.1f, _actLimit=%.1f -> limit=%.1f\r\n", _dataIncrease._consecutiveCnt, abs(gridPower - config.Shelly.TargetValue), _actLimit, limit);
 
     return CheckBoundary(limit);
 }

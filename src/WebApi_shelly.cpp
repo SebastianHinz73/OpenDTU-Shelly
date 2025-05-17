@@ -171,16 +171,16 @@ void WebApiShellyClass::onShellyFileGet(AsyncWebServerRequest* request)
         return;
     }
 
-    MessageOutput.print("onFileGet\r\n");
-
     static size_t fileSize = 0;
     static ResponseFiller responseFiller;
 
     auto& data = ShellyWrapper.getShellyData();
     data.BackupAll(fileSize, responseFiller);
 
+    // MessageOutput.printf("onFileGet fileSize: %u\r\n", fileSize);
+
     AsyncWebServerResponse* response = request->beginResponse("application/octet-stream", fileSize, [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
-        MessageOutput.printf("beginResponse maxLen=%d, alreadySent=%d\r\n", maxLen, alreadySent);
+        // MessageOutput.printf("beginResponse maxLen=%d, alreadySent=%d\r\n", maxLen, alreadySent);
         return responseFiller(buffer, maxLen, alreadySent, fileSize);
     });
     response->addHeader("Server", "ESP Async Web Server");

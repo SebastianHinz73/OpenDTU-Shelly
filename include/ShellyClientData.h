@@ -20,6 +20,7 @@ class ShellyClientData {
 public:
     ShellyClientData(ITimeLapse& timeLapse);
     virtual ~ShellyClientData();
+    void init(bool psRam);
 
     void Update(RamDataType_t type, float value);
     void Update(ShellyClientDataType_t type, std::string value);

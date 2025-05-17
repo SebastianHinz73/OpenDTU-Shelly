@@ -28,7 +28,7 @@
 
                 <InputElement :label="$t('fileadmin.Download')" type="noinput">
                     <a href="#" class="icon" :title="$t('fileadmin.Download')">
-                                    <BIconDownload v-on:click="downloadFile('shelly_data.txt')" />
+                                    <BIconDownload v-on:click="downloadFile('shelly_data.bin')" />
                                 </a>
                 </InputElement>
             </CardElement>

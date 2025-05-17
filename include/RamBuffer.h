@@ -40,7 +40,7 @@ public:
     void forAllEntriesReverse(RamDataType_t type, time_t lastMillis, const DoDataEntry& doDataEntry);
     void forAllEntries(RamDataType_t type, time_t lastMillis, const DoDataEntry& doDataEntry);
     bool getNextEntry(dataEntry_t*& act);
-    size_t getUsedElements() const { return _header->last >= _header->first ? _header->last - _header->first : _elements; }
+    size_t getUsedElements() const { return _header->last >= _header->first ? _header->last - _header->first : _elements - 1; }
 
 private:
     int toIndex(const dataEntry_t* entry) { return entry - _header->start; }

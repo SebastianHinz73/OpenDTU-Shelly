@@ -10,8 +10,14 @@
 
 ShellyClientData::ShellyClientData(ITimeLapse& timeLapse)
     : _timeLapse(timeLapse)
+    , _ramBuffer(nullptr)
 {
-    int ramDiskSize = 4096; // 7 * 60 Sekunden * 10 Bytes = 4200
+}
+
+void ShellyClientData::init(bool psRam)
+{
+    uint32_t ramDiskSize = psRam ? 65536 : 4096; // PSRAM ? more than 10 minutes : 8 * 60 Sekunden * 10 Bytes = 4800
+
     uint8_t* ramDisk = new uint8_t[ramDiskSize];
 
     _ramBuffer = new RamBuffer(ramDisk, ramDiskSize, _timeLapse);
@@ -29,10 +35,12 @@ void ShellyClientData::Update(RamDataType_t type, float value)
     std::lock_guard<std::mutex> lock(_mutex);
 
     auto now = _timeLapse.millis();
-    if (type == RamDataType_t::Pro3EM) {
-        MessageOutput.printf("## Pro3EM %.1f, %lu\r\n", value, now);
-    }
 
+    /*  if (type == RamDataType_t::Pro3EM) {
+          auto f = _ramBuffer->getLastEntry(RamDataType_t::PlugS);
+          MessageOutput.printf("## Pro3EM %.1f, %lu PlugS %.1f\r\n", value, now, (f != nullptr) ? 0.1 : 0.2);
+      }
+  */
     _ramBuffer->writeValue(type, now, value);
 }
 
@@ -140,7 +148,7 @@ void ShellyClientData::BackupAll(size_t& fileSize, ResponseFiller& responseFille
     static dataEntry_t* act;
     act = nullptr;
 
-    responseFiller = [&](uint8_t* buffer, size_t maxLen, size_t /*alreadySent*/, size_t /*fileSize*/) -> size_t {
+    responseFiller = [&](uint8_t* buffer, size_t maxLen, size_t alreadySent, size_t fileSize) -> size_t {
         size_t ret = 0;
         size_t maxCnt = maxLen / sizeof(dataEntry_t);
 
@@ -152,7 +160,8 @@ void ShellyClientData::BackupAll(size_t& fileSize, ResponseFiller& responseFille
             ret += sizeof(dataEntry_t);
         }
 
-        if (ret == 0) {
+        if (ret + alreadySent == fileSize) {
+            //MessageOutput.printf("responseFiller %u == %u unlock\r\n", ret + alreadySent, fileSize);
             _mutex.unlock();
         }
         return ret;

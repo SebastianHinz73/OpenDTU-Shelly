@@ -19,6 +19,8 @@ ShellyWrapperClass::ShellyWrapperClass()
 
 void ShellyWrapperClass::init(Scheduler& scheduler)
 {
+    ShellyClientData::init(ESP.getPsramSize() > 0);
+
     scheduler.addTask(_loopFetchTask);
     _loopFetchTask.enable();
 
@@ -47,7 +49,6 @@ void ShellyWrapperClass::loopFetch()
 
 void ShellyWrapperClass::loopCalc()
 {
-    MessageOutput.printf("test %d\r\n", 123);
     LimitControlCalculation::loop();
 }
 
@@ -83,7 +84,12 @@ void ShellyWrapperClass::HandleWebsocket(WebSocketData& data, const char* hostna
 
     if (data.Connected) {
         if (nowMillis - data.LastTime > data.MaxInterval) {
-            data.Client->sendTXT("{\"id\":2, \"src\":\"user_1\", \"method\":\"Shelly.GetStatus\"}");
+
+            std::string send = "{\"id\":0, \"src\":\"user_1\", \"method\":\"Shelly.GetStatus\"}";
+            if (data.ShellyType == RamDataType_t::Pro3EM) {
+                send = send.replace(6, 1, "1");
+            }
+            data.Client->sendTXT(send.c_str());
 
             std::lock_guard<std::mutex> lock(_mutex);
             data.LastTime = nowMillis;
@@ -121,6 +127,7 @@ void ShellyWrapperClass::Events(WebSocketData& data, WStype_t type, uint8_t* pay
         data.Connected = true;
         break;
     case WStype_TEXT: {
+        MessageOutput.printf("[WSc] WStype_TEXT %d -> %s length: %u\r\n", data.ShellyType == RamDataType_t::Pro3EM, payload, length);
         auto ParseDouble = [&](const char* search, double& result) {
             // e.g. ...ull,"total_act_power":225.658,"total
             // e.g. ...ue, "apower":0.0, "volta
@@ -135,10 +142,13 @@ void ShellyWrapperClass::Events(WebSocketData& data, WStype_t type, uint8_t* pay
 
         if (data.ShellyType == RamDataType_t::Pro3EM) {
             if (ParseDouble("\"total_act_power\":", data.LastValue)) {
+                MessageOutput.printf("ParseDouble Pro3EM\r\n");
                 ShellyClientData::Update(data.ShellyType, data.LastValue);
             }
         } else {
+            MessageOutput.printf("ParseDouble PlugS\r\n");
             if (ParseDouble("\"apower\":", data.LastValue)) {
+                MessageOutput.printf("ParseDouble PlugS %.1f\r\n", data.LastValue);
                 ShellyClientData::Update(data.ShellyType, data.LastValue);
             }
         }
