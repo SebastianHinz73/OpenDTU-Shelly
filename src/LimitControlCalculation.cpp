@@ -107,7 +107,7 @@ float LimitControlCalculation::Increase(CalcLimitFunctionData_t& context, float 
         limit = config.Shelly.MaxPower;
     }
 
-    MessageOutput.printf("Increase %d: %.1f, _actLimit=%.1f -> limit=%.1f\r\n", _dataIncrease._consecutiveCnt, abs(gridPower - config.Shelly.TargetValue), _actLimit, limit);
+    // MessageOutput.printf("Increase %d: %.1f, _actLimit=%.1f -> limit=%.1f\r\n", _dataIncrease._consecutiveCnt, abs(gridPower - config.Shelly.TargetValue), _actLimit, limit);
 
     return CheckBoundary(limit);
 }

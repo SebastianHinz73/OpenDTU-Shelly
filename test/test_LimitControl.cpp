@@ -26,9 +26,12 @@ void test_Limit1()
 {
     setConfig();
 
-    ShellyWrapperMock shellyWrapperMock(1);
+    ShellyWrapperMock shellyWrapperMock(10);
 
-    TEST_ASSERT_TRUE(shellyWrapperMock.runFile("test\\ShellyData\\shelly_data3.bin"));
+    bool rc = shellyWrapperMock.runFile("test\\ShellyData\\shelly_data4.bin", [](RamDataType_t type, float value) {
+        printf("%d: %.1f\r\n", type, value);
+    });
+    TEST_ASSERT_TRUE(rc);
     TEST_ASSERT_EQUAL(32, 32);
 }
 
@@ -61,13 +64,14 @@ void test_WebServer()
 {
     setConfig();
     ShellyWrapperMock shellyWrapperMock(1);
+    shellyWrapperMock.setChannelPower(400, 400, 400, 400);
+    shellyWrapperMock.setPro3emOffset(500.0);
 
     TestServer server;
     server.Start();
+    server.WaitStarted();
 
-    bool rc = shellyWrapperMock.runFile("test\\ShellyData\\shelly_data3.bin", [&server](const dataEntry_t& data) {
-        server.Update(RamDataType_t::Pro3EM, data.value);
-    });
+    bool rc = shellyWrapperMock.runFile("test\\ShellyData\\shelly_data4.bin", [&server](RamDataType_t type, float value) { server.Update(type, value); }, false);
 
     TEST_ASSERT_TRUE(rc);
 
@@ -82,7 +86,7 @@ void test_LimitControl()
 {
     UNITY_BEGIN();
     // RUN_TEST(test_Limit1);
-    //   RUN_TEST(test_LimitIncrease);
+    //    RUN_TEST(test_LimitIncrease);
     RUN_TEST(test_WebServer);
     UNITY_END();
 }

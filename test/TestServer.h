@@ -13,8 +13,6 @@
 
 #define TESTSERVER_PORT 80
 
-extern int my_main();
-
 typedef websocketpp::server<websocketpp::config::asio> server;
 
 using websocketpp::connection_hdl;
@@ -28,6 +26,7 @@ public:
     ~TestServer();
     void Start();
     void Stop();
+    void WaitStarted();
     void Update(RamDataType_t type, float value);
 
 private:
@@ -35,7 +34,6 @@ private:
     void on_close(connection_hdl hdl);
     void on_message(connection_hdl hdl, server::message_ptr msg);
     void run(uint16_t port);
-    void sendTest();
     void stop();
 
 private:
@@ -44,8 +42,8 @@ private:
     con_list m_connections;
     con_list _connPro;
     con_list _connPlugS;
+    std::mutex _connMutex;
 
 private:
-    std::thread* _senderThread;
     std::thread* _runThread;
 };

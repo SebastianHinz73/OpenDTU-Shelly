@@ -23,10 +23,11 @@ public:
     virtual int fetchChannelPower(float channelPower[]);
     virtual unsigned long millis();
 
-    bool runFile(std::string filename, std::function<void(const dataEntry_t& data)> updateWebserver = nullptr);
+    bool runFile(std::string filename, std::function<void(RamDataType_t type, float value)> updateWebserver = nullptr, bool onlyView = false);
     void runTestData(TestEntry_t data[], int size, std::function<void(const TestEntry_t& act)> checkFunc = nullptr);
 
     void setChannelPower(float c1, float c2, float c3, float c4);
+    void setPro3emOffset(float offset) { _offsetPro3em = offset; }
 
 public:
     float _CalcLimit;
@@ -42,4 +43,7 @@ private:
     float _factor;
     timeb _Start;
     std::ifstream _file;
+    unsigned long _lastTimePlugS;
+    float _lastValuePlugS;
+    float _offsetPro3em;
 };

@@ -14,6 +14,7 @@ ShellyWrapperClass::ShellyWrapperClass()
     , LimitControlCalculation(*this, *this)
     , _loopFetchTask(TASK_IMMEDIATE, TASK_FOREVER, std::bind(&ShellyWrapperClass::loopFetch, this))
     , _loopCalcTask(1 * TASK_SECOND, TASK_FOREVER, std::bind(&ShellyWrapperClass::loopCalc, this))
+    , _nativeDebug(false)
 {
 }
 
@@ -49,7 +50,9 @@ void ShellyWrapperClass::loopFetch()
 
 void ShellyWrapperClass::loopCalc()
 {
-    LimitControlCalculation::loop();
+    if (!_nativeDebug) {
+        LimitControlCalculation::loop();
+    }
 }
 
 void ShellyWrapperClass::HandleWebsocket(WebSocketData& data, const char* hostname, std::function<void(WStype_t type, uint8_t* payload, size_t length)> cbEvent)
@@ -127,7 +130,7 @@ void ShellyWrapperClass::Events(WebSocketData& data, WStype_t type, uint8_t* pay
         data.Connected = true;
         break;
     case WStype_TEXT: {
-        MessageOutput.printf("[WSc] WStype_TEXT %d -> %s length: %u\r\n", data.ShellyType == RamDataType_t::Pro3EM, payload, length);
+        // MessageOutput.printf("[WSc] WStype_TEXT %d -> %s length: %u\r\n", data.ShellyType == RamDataType_t::Pro3EM, payload, length);
         auto ParseDouble = [&](const char* search, double& result) {
             // e.g. ...ull,"total_act_power":225.658,"total
             // e.g. ...ue, "apower":0.0, "volta
@@ -140,16 +143,55 @@ void ShellyWrapperClass::Events(WebSocketData& data, WStype_t type, uint8_t* pay
             return false;
         };
 
-        if (data.ShellyType == RamDataType_t::Pro3EM) {
-            if (ParseDouble("\"total_act_power\":", data.LastValue)) {
-                MessageOutput.printf("ParseDouble Pro3EM\r\n");
-                ShellyClientData::Update(data.ShellyType, data.LastValue);
+        if (!_nativeDebug) {
+            if (data.ShellyType == RamDataType_t::Pro3EM) {
+                if (ParseDouble("\"total_act_power\":", data.LastValue)) {
+                    ShellyClientData::Update(data.ShellyType, data.LastValue);
+                    break;
+                }
+            } else {
+                if (ParseDouble("\"apower\":", data.LastValue)) {
+                    ShellyClientData::Update(data.ShellyType, data.LastValue);
+                    break;
+                }
+            }
+            if (strstr(reinterpret_cast<char*>(payload), "opendtu_shelly_debug") != nullptr) {
+                _nativeDebug = true;
+                break;
             }
         } else {
-            MessageOutput.printf("ParseDouble PlugS\r\n");
-            if (ParseDouble("\"apower\":", data.LastValue)) {
-                MessageOutput.printf("ParseDouble PlugS %.1f\r\n", data.LastValue);
-                ShellyClientData::Update(data.ShellyType, data.LastValue);
+            double value;
+            if (ParseDouble("::Pro3EM:", ShellyWrapper._Pro3EM.LastValue)) {
+                ShellyClientData::Update(RamDataType_t::Pro3EM, ShellyWrapper._Pro3EM.LastValue);
+                break;
+            }
+            if (ParseDouble("::Pro3EM_Min:", value)) {
+                ShellyClientData::Update(RamDataType_t::Pro3EM_Min, value);
+                break;
+            }
+            if (ParseDouble("::Pro3EM_Max:", value)) {
+                ShellyClientData::Update(RamDataType_t::Pro3EM_Max, value);
+                break;
+            }
+            if (ParseDouble("::PlugS:", ShellyWrapper._PlugS.LastValue)) {
+                ShellyClientData::Update(RamDataType_t::PlugS, ShellyWrapper._PlugS.LastValue);
+                break;
+            }
+            if (ParseDouble("::PlugS_Min:", value)) {
+                ShellyClientData::Update(RamDataType_t::PlugS_Min, value);
+                break;
+            }
+            if (ParseDouble("::PlugS_Max:", value)) {
+                ShellyClientData::Update(RamDataType_t::PlugS_Max, value);
+                break;
+            }
+            if (ParseDouble("::CalulatedLimit:", value)) {
+                ShellyClientData::Update(RamDataType_t::CalulatedLimit, value);
+                break;
+            }
+            if (ParseDouble("::Limit:", value)) {
+                ShellyClientData::Update(RamDataType_t::Limit, value);
+                break;
             }
         }
     } break;

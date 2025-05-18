@@ -6,11 +6,15 @@
 #include "ShellyWrapperMock.h"
 #include <MessageOutput.h>
 #include <iostream>
+#include <thread>
 
 ShellyWrapperMock::ShellyWrapperMock(float factor)
     : ShellyClientData(*((IShellyWrapper*)this))
     , LimitControlCalculation(*this, *this)
     , _factor(factor)
+    , _lastTimePlugS(0)
+    , _lastValuePlugS(0)
+    , _offsetPro3em(0)
 {
     ftime(&_Start);
     init(false); // ShellyClientData
@@ -20,7 +24,7 @@ ShellyWrapperMock::~ShellyWrapperMock()
 {
 }
 
-bool ShellyWrapperMock::runFile(std::string filename, std::function<void(const dataEntry_t& data)> updateWebserver)
+bool ShellyWrapperMock::runFile(std::string filename, std::function<void(RamDataType_t type, float value)> updateWebserver, bool onlyView)
 {
     auto lastCalc = millis();
     auto lastData = millis();
@@ -39,24 +43,32 @@ bool ShellyWrapperMock::runFile(std::string filename, std::function<void(const d
             if (act->type != RamDataType_t::Pro3EM) {
                 continue;
             }
+            auto act_value = act->value - _lastValuePlugS + _offsetPro3em;
 
             if (act->time > now) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 break;
             }
             if (updateWebserver != nullptr) {
-                updateWebserver(*act);
+                updateWebserver(RamDataType_t::Pro3EM, act_value);
             }
 
-            ShellyClientData::Update(act->type, act->value);
+            ShellyClientData::Update(RamDataType_t::Pro3EM, act_value);
             lastData = now;
+        }
 
+        if (onlyView) {
             fflush(stdout);
+            continue;
         }
 
         // update
         if (now - lastData > TASK_SECOND) {
             lastData = now;
             ShellyClientData::Update(RamDataType_t::Pro3EM, ShellyClientData::GetActValue(RamDataType_t::Pro3EM));
+        }
+        if (now - _lastTimePlugS > TASK_SECOND) {
+            _lastTimePlugS = now;
             ShellyClientData::Update(RamDataType_t::PlugS, ShellyClientData::GetActValue(RamDataType_t::PlugS));
         }
 
@@ -64,7 +76,16 @@ bool ShellyWrapperMock::runFile(std::string filename, std::function<void(const d
         if (now - lastCalc > TASK_SECOND) {
             lastCalc = now;
             LimitControlCalculation::loop();
+
+            if (updateWebserver != nullptr) {
+                updateWebserver(RamDataType_t::Pro3EM_Min, ShellyClientData::GetActValue(RamDataType_t::Pro3EM_Min));
+                updateWebserver(RamDataType_t::Pro3EM_Max, ShellyClientData::GetActValue(RamDataType_t::Pro3EM_Max));
+                updateWebserver(RamDataType_t::PlugS, ShellyClientData::GetActValue(RamDataType_t::PlugS));
+                updateWebserver(RamDataType_t::CalulatedLimit, ShellyClientData::GetActValue(RamDataType_t::CalulatedLimit));
+                updateWebserver(RamDataType_t::Limit, ShellyClientData::GetActValue(RamDataType_t::Limit));
+            }
         }
+        fflush(stdout);
     }
     return true;
 }
@@ -174,6 +195,10 @@ bool ShellyWrapperMock::sendLimit(float limit)
         sum += _ChannelPower[i];
     }
     ShellyClientData::Update(RamDataType_t::PlugS, sum);
+    ShellyClientData::Update(RamDataType_t::Limit, sum);
+
+    _lastTimePlugS = millis();
+    _lastValuePlugS = sum;
     return true;
 }
 

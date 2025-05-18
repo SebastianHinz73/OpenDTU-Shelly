@@ -4,8 +4,7 @@
 // https://github.com/zaphoyd/websocketpp/issues/403
 
 TestServer::TestServer()
-    : _senderThread(nullptr)
-    , _runThread(nullptr)
+    : _runThread(nullptr)
 {
     m_server.init_asio();
 
@@ -37,11 +36,16 @@ void TestServer::on_message(connection_hdl hdl, server::message_ptr msg)
     auto payload = msg->get_payload();
     auto id = payload.substr(6, 1);
 
-    if (std::stoi(id) == 1) {
-        _connPro.insert(hdl);
-    } else {
-        _connPlugS.insert(hdl);
+    {
+        std::lock_guard<std::mutex> lock(_connMutex);
+
+        if (std::stoi(id) == 1) {
+            _connPro.insert(hdl);
+        } else {
+            _connPlugS.insert(hdl);
+        }
     }
+    m_server.send(hdl, "opendtu_shelly_debug", websocketpp::frame::opcode::text);
 }
 
 void TestServer::run(uint16_t port)
@@ -51,52 +55,47 @@ void TestServer::run(uint16_t port)
     m_server.run();
 }
 
-void TestServer::sendTest()
-{
-    int cnt = 20;
-    while (cnt-- > 0) {
-        for (auto it : m_connections) {
-            m_server.send(it, "TEEEEEST", websocketpp::frame::opcode::text);
-        }
-        Sleep(300);
-    }
-}
-
 void TestServer::stop()
 {
     m_server.stop_listening();
 
-    for (auto it : m_connections) {
-        m_server.pause_reading(it);
-        m_server.close(it, 0, "");
+    {
+        std::lock_guard<std::mutex> lock(_connMutex);
+        for (auto it : m_connections) {
+            m_server.pause_reading(it);
+            m_server.close(it, 0, "");
+        }
+    }
+}
+
+void TestServer::WaitStarted()
+{
+    while (1) {
+        bool bExit = false;
+        {
+            std::lock_guard<std::mutex> lock(_connMutex);
+            bExit = _connPro.size() > 0 && _connPlugS.size() > 0;
+        }
+        if (bExit) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 }
 
 void TestServer::Start()
 {
-    //_senderThread = new std::thread([this]() {
-    //    sendTest();
-    //});
-
     _runThread = new std::thread([this]() {
-        run(80);
-        printf("Servers stopped\r\n");
-        fflush(stdout);
+        run(TESTSERVER_PORT);
     });
 }
 
 void TestServer::Stop()
 {
-    if (_senderThread != nullptr) {
-        _senderThread->join();
-        delete _senderThread;
-        _senderThread = nullptr;
-    }
-
     if (_runThread != nullptr) {
-        printf("server.stop 1\r\n");
-        fflush(stdout);
         stop();
+        std::this_thread::sleep_for(std::chrono::microseconds(1000));
 
         _runThread->join();
         delete _runThread;
@@ -106,15 +105,46 @@ void TestServer::Stop()
 
 void TestServer::Update(RamDataType_t type, float value)
 {
+    std::lock_guard<std::mutex> lock(_connMutex);
+
     static char b[64];
 
     switch (type) {
     case RamDataType_t::Pro3EM:
-        sprintf(b, "\"total_act_power\":%.3f,", value);
-
         if (_connPro.size() > 0) {
+            sprintf(b, "::Pro3EM:%.3f,", value);
             m_server.send(*_connPro.begin(), b, websocketpp::frame::opcode::text);
         }
         break;
-    }
+    case RamDataType_t::Pro3EM_Min:
+        if (_connPro.size() > 0) {
+            sprintf(b, "::Pro3EM_Min:%.3f,", value);
+            m_server.send(*_connPro.begin(), b, websocketpp::frame::opcode::text);
+        }
+        break;
+    case RamDataType_t::Pro3EM_Max:
+        if (_connPro.size() > 0) {
+            sprintf(b, "::Pro3EM_Max:%.3f,", value);
+            m_server.send(*_connPro.begin(), b, websocketpp::frame::opcode::text);
+        }
+        break;
+    case RamDataType_t::PlugS:
+        if (_connPlugS.size() > 0) {
+            sprintf(b, "::PlugS:%.3f,", value);
+            m_server.send(*_connPlugS.begin(), b, websocketpp::frame::opcode::text);
+        }
+        break;
+    case RamDataType_t::CalulatedLimit:
+        if (_connPlugS.size() > 0) {
+            sprintf(b, "::CalulatedLimit:%.3f,", value);
+            m_server.send(*_connPlugS.begin(), b, websocketpp::frame::opcode::text);
+        }
+        break;
+    case RamDataType_t::Limit:
+        if (_connPlugS.size() > 0) {
+            sprintf(b, "::Limit:%.3f,", value);
+            m_server.send(*_connPlugS.begin(), b, websocketpp::frame::opcode::text);
+        }
+        break;
+    };
 }

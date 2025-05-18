@@ -2,9 +2,9 @@
 #pragma once
 
 #include "Configuration.h"
+#include "IShellyWrapper.h"
 #include "LimitControlCalculation.h"
 #include "ShellyClientData.h"
-#include "IShellyWrapper.h"
 #include <ArduinoJson.h>
 #include <TaskSchedulerDeclarations.h>
 #include <WebSocketsClient.h>
@@ -68,6 +68,7 @@ private:
     Task _loopCalcTask;
     WebSocketData _Pro3EM;
     WebSocketData _PlugS;
+    bool _nativeDebug;
 };
 
 extern ShellyWrapperClass ShellyWrapper;
