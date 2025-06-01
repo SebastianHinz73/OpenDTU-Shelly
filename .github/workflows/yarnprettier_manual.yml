@@ -30,6 +30,6 @@ jobs:
       - name: Commit Formatting
         run: yarn prettier --write src/
 
-      - uses: autofix-ci/action@v1
+      - uses: actions/action@v1
         with:
           commit-message: "Apply Prettier format"
