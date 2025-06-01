@@ -1,4 +1,4 @@
-name: Manual Yarn Prettier
+name: autofix.ci
 
 on:
   workflow_dispatch:
