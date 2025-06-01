@@ -11,7 +11,10 @@
             <div v-if="isNoInput">
                 <slot />
             </div>
-            <div v-else-if="!isTextarea" :class="{ 'form-check form-switch': isCheckbox, 'input-group': postfix || prefix }">
+            <div
+                v-else-if="!isTextarea"
+                :class="{ 'form-check form-switch': isCheckbox, 'input-group': postfix || prefix }"
+            >
                 <span v-if="prefix" class="input-group-text" :id="descriptionId">
                     {{ prefix }}
                 </span>
