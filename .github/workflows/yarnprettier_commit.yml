@@ -1,7 +1,7 @@
 name: Yarn Prettier
 
 on: 
-  workflow_dispatch():
+  workflow_dispatch:
 
 permissions: {}
 
