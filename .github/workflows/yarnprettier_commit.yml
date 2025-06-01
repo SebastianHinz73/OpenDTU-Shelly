@@ -1,6 +1,6 @@
-name: Yarn Prettier
+name: Yarn Prettier123
 
-on: 
+on:
   workflow_dispatch:
 
 permissions: {}
