@@ -67,7 +67,6 @@
 </template>
 
 <script lang="ts">
-import InterfaceApInfo from '@/components/InterfaceApInfo.vue';
 import type { LiveDataGraph, validDataNames, SingleGraph } from '@/types/LiveDataGraph';
 import { authHeader, handleResponse } from '@/utils/authentication';
 import { defineComponent } from 'vue';
@@ -114,7 +113,6 @@ let newestXAxis : number = 0;
 
 export default defineComponent({
   components: {
-      InterfaceApInfo,
       Scatter,
       CardElement,
   },
@@ -150,16 +148,20 @@ export default defineComponent({
           scales: {
             x: {
                 ticks: {
-                    callback: function(value: any) {
-                      return value - newestXAxis;
+                    callback: function(value: string | number) {
+                        if (typeof value == 'number')
+                        {
+                            return value - newestXAxis;
+                        }
+                      return "";
                     }
                 }
             }
           },
-          plugins: {
+           plugins: {
             legend: {
               display: true
-            } 
+            }
           }
         }
       };
@@ -202,9 +204,9 @@ export default defineComponent({
 
                 this.liveData = data;
                 this.timestamp = data["timestamp"];
-                this.interval = data["interval"]; 
+                this.interval = data["interval"];
 
-                var interval:number = this.interval;
+                let interval:number = this.interval;
                 if(initialLoading)
                 {
                   interval = 2000;
@@ -213,7 +215,7 @@ export default defineComponent({
                 this.fetchInterval = setTimeout(() => {
                   this.fetchData();
                 }, interval);
-                
+
                 if(this.liveData.view_option > 0)
                 {
                   this.handleLoading(initialLoading, "data_pro3em");
@@ -239,9 +241,9 @@ export default defineComponent({
       }
     },
     graphDataset(graphs: SingleGraph[], length: number) {
-   
-      let sets : IDatasets[] = [];
-      if(graphs === undefined) 
+
+      const sets : IDatasets[] = [];
+      if(graphs === undefined)
       {
         return {
           datasets: [
@@ -254,11 +256,11 @@ export default defineComponent({
         {
           return;
         }
-        let newestX = this.data[element.data_name][this.data[element.data_name].length-1].x; 
-        let max: number = newestX - length;
+        const newestX = this.data[element.data_name][this.data[element.data_name].length-1].x;
+        const max: number = newestX - length;
         newestXAxis = Math.floor(newestX/10) * 10 + 10;
 
-        let set: IDatasets = {
+        const set: IDatasets = {
           label: element.label,
           fill: false,
           borderColor: element.color,

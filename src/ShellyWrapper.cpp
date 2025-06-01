@@ -5,6 +5,7 @@
 
 #include "ShellyWrapper.h"
 #include "MessageOutput.h"
+#include "NetworkSettings.h"
 #include <Hoymiles.h>
 
 ShellyWrapperClass ShellyWrapper;
@@ -87,8 +88,9 @@ void ShellyWrapperClass::HandleWebsocket(WebSocketData& data, const char* hostna
 
     if (data.Connected) {
         if (nowMillis - data.LastTime > data.MaxInterval) {
-
-            std::string send = "{\"id\":0, \"src\":\"user_1\", \"method\":\"Shelly.GetStatus\"}";
+            std::string send = "{\"id\":0, \"src\":\"user_";
+            send += NetworkSettings.localIP().toString().c_str();
+            send += "\", \"method\":\"Shelly.GetStatus\"}";
             if (data.ShellyType == RamDataType_t::Pro3EM) {
                 send = send.replace(6, 1, "1");
             }
