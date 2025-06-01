@@ -1,4 +1,4 @@
-import type { ValueObject } from "./LiveDataStatus";
+import type { ValueObject } from './LiveDataStatus';
 
 export const validDataNames = {
     data_pro3em: 1,
@@ -10,7 +10,6 @@ export const validDataNames = {
     data_calculated_limit: 7,
     data_limit: 8,
 };
-
 
 export interface SingleGraph {
     data_name: keyof typeof validDataNames;

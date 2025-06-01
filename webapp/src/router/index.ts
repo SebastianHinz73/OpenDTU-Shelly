@@ -101,11 +101,11 @@ const router = createRouter({
             path: '/settings/dtu',
             name: 'DTU Settings',
             component: DtuAdminView,
-    },
-    {
+        },
+        {
             path: '/settings/shelly',
             name: 'Shelly Settings',
-            component: ShellyAdminView
+            component: ShellyAdminView,
         },
         {
             path: '/settings/device',

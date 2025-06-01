@@ -25,7 +25,8 @@
                                 :title="$t('firmwareinfo.FirmwareVersionHint')"
                             >
                                 {{ systemStatus.git_hash }}
-                            </a></td>
+                            </a>
+                        </td>
                     </tr>
                     <tr>
                         <th>{{ $t('firmwareinfo.ShellyDtuVersion') }}</th>
