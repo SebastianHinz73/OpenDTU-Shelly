@@ -28,8 +28,10 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Commit Formatting
-        run: yarn prettier --write src/
-
-      - uses: actions/action@v1
+        run: |
+          yarn
+          yarn prettier --write src/
+         
+      - uses: autofix-ci/action@v1
         with:
           commit-message: "Apply Prettier format"
