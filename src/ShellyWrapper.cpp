@@ -11,7 +11,7 @@
 ShellyWrapperClass ShellyWrapper;
 
 ShellyWrapperClass::ShellyWrapperClass()
-    : ShellyClientData(*((IShellyWrapper*)this))
+    : ShellyClientData(*(reinterpret_cast<IShellyWrapper*>(this)))
     , LimitControlCalculation(*this, *this)
     , _loopFetchTask(TASK_IMMEDIATE, TASK_FOREVER, std::bind(&ShellyWrapperClass::loopFetch, this))
     , _loopCalcTask(1 * TASK_SECOND, TASK_FOREVER, std::bind(&ShellyWrapperClass::loopCalc, this))
@@ -59,7 +59,7 @@ void ShellyWrapperClass::loopCalc()
 void ShellyWrapperClass::HandleWebsocket(WebSocketData& data, const char* hostname, std::function<void(WStype_t type, uint8_t* payload, size_t length)> cbEvent)
 {
     const CONFIG_T& config = Configuration.get();
-    unsigned long nowMillis = millis();
+    uint32_t nowMillis = millis();
 
     bool bDelete = data.Host.compare(hostname) != 0; // hostname changed in configuration
     bDelete |= strlen(hostname) == 0; // IP deleted in configuration

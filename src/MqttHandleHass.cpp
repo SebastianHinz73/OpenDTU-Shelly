@@ -246,7 +246,7 @@ void MqttHandleHassClass::publishInverterNumber(
 void MqttHandleHassClass::publishShelly(std::shared_ptr<InverterAbstract> inv, const char* caption, const char* stateTopic, const char* device_class, const char* unit_of_measure)
 {
 
-    // TODO (shi)
+    // TODO(shi)
     /*
     DynamicJsonDocument root(1024);
     if (!Utils::checkJsonAlloc(root, __FUNCTION__, __LINE__)) {

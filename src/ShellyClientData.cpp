@@ -49,7 +49,7 @@ void ShellyClientData::Update(ShellyClientDataType_t type, std::string value)
     std::lock_guard<std::mutex> lock(_mutex);
 
     if (type >= ShellyClientDataType_t::Pro3EM && type < ShellyClientDataType_t::MAX) {
-        uint16_t i = (uint16_t)type;
+        uint16_t i = static_cast<uint16_t>(type);
 
         if (_Debug[i].length() > 30) {
             _Debug[i] = "";
@@ -161,7 +161,7 @@ void ShellyClientData::BackupAll(size_t& fileSize, ResponseFiller& responseFille
         }
 
         if (ret + alreadySent == fileSize) {
-            //MessageOutput.printf("responseFiller %u == %u unlock\r\n", ret + alreadySent, fileSize);
+            // MessageOutput.printf("responseFiller %u == %u unlock\r\n", ret + alreadySent, fileSize);
             _mutex.unlock();
         }
         return ret;
@@ -173,7 +173,7 @@ std::string& ShellyClientData::GetDebug(ShellyClientDataType_t type, std::string
     std::lock_guard<std::mutex> lock(_mutex);
 
     if (type >= ShellyClientDataType_t::Pro3EM && type < ShellyClientDataType_t::MAX) {
-        uint16_t i = (uint16_t)type;
+        uint16_t i = static_cast<uint16_t>(type);
         result = _Debug[i].c_str();
         _Debug[i] = "";
     }

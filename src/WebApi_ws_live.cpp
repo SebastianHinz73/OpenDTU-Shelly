@@ -426,7 +426,7 @@ void WebApiWsLiveClass::onGraphUpdate(AsyncWebServerRequest* request)
 
             generateShellyCardJsonResponse(root, viewOptions);
 
-            long long timestamp = 0;
+            uint64_t timestamp = 0;
             uint32_t interval = 2 * TASK_SECOND;
 
             if (request->hasParam("timestamp")) {
