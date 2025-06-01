@@ -210,7 +210,7 @@ int ShellyWrapperMock::fetchChannelPower(float channelPower[])
     return 4;
 }
 
-unsigned long ShellyWrapperMock::millis()
+uint32_t ShellyWrapperMock::millis()
 {
     struct timeb now;
     ftime(&now);

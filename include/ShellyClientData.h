@@ -18,7 +18,7 @@ typedef std::function<size_t(uint8_t* buffer, size_t maxLen, size_t alreadySent,
 
 class ShellyClientData {
 public:
-    ShellyClientData(ITimeLapse& timeLapse);
+    explicit ShellyClientData(ITimeLapse& timeLapse);
     virtual ~ShellyClientData();
     void init(bool psRam);
 
@@ -36,5 +36,5 @@ private:
     ITimeLapse& _timeLapse;
     std::mutex _mutex;
     RamBuffer* _ramBuffer;
-    std::string _Debug[(uint16_t)ShellyClientDataType_t::MAX];
+    std::string _Debug[static_cast<uint16_t>(ShellyClientDataType_t::MAX)];
 };

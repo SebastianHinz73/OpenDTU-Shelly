@@ -35,8 +35,8 @@ public:
     std::string Host;
     WebSocketsClient* Client;
     double LastValue;
-    unsigned long LastTime;
-    unsigned long UpdatedTime;
+    uint32_t LastTime;
+    uint32_t UpdatedTime;
     bool Connected;
     RamDataType_t ShellyType;
     uint32_t MaxInterval;
@@ -54,7 +54,7 @@ public:
     virtual bool isReachable();
     virtual bool sendLimit(float limit);
     virtual int fetchChannelPower(float channelPower[]);
-    virtual unsigned long millis();
+    virtual uint32_t millis();
 
 private:
     void HandleWebsocket(WebSocketData& data, const char* hostname, std::function<void(WStype_t type, uint8_t* payload, size_t length)> cbEvent);

@@ -8,7 +8,7 @@
 class TestLapse : public ITimeLapse {
 public:
     virtual ~TestLapse() { }
-    virtual unsigned long millis()
+    virtual uint32_t millis()
     {
         return _cnt++;
     }

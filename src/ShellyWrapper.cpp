@@ -113,6 +113,7 @@ void ShellyWrapperClass::HandleWebsocket(WebSocketData& data, const char* hostna
 void ShellyWrapperClass::EventsPro3EM(WStype_t type, uint8_t* payload, size_t length)
 {
     ShellyWrapper.Events(ShellyWrapper._Pro3EM, type, payload, length);
+    MessageOutput.printf("EventsPro3EM\r\n");
 }
 
 void ShellyWrapperClass::EventsPlugS(WStype_t type, uint8_t* payload, size_t length)
@@ -246,7 +247,7 @@ int ShellyWrapperClass::fetchChannelPower(float channelPower[])
     return channelCnt;
 }
 
-unsigned long ShellyWrapperClass::millis()
+uint32_t ShellyWrapperClass::millis()
 {
     return ::millis();
 }
