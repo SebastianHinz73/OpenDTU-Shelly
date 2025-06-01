@@ -6,6 +6,7 @@
 #include "ShellyClientData.h"
 #include <fstream>
 #include <mutex>
+#include <stdint.h>
 
 typedef struct
 {
@@ -21,7 +22,7 @@ public:
     virtual bool isReachable() { return true; }
     virtual bool sendLimit(float limit);
     virtual int fetchChannelPower(float channelPower[]);
-    virtual unsigned long millis();
+    virtual uint32_t millis();
 
     bool runFile(std::string filename, std::function<void(RamDataType_t type, float value)> updateWebserver = nullptr, bool onlyView = false);
     void runTestData(TestEntry_t data[], int size, std::function<void(const TestEntry_t& act)> checkFunc = nullptr);
