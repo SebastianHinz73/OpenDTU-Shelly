@@ -2,8 +2,8 @@
 #pragma once
 
 #ifdef ARDUINO
+#include "Config_t.h"
 #include "PinMapping.h"
-#include "config_t.h"
 #include <TaskSchedulerDeclarations.h>
 #include <condition_variable>
 #include <cstdint>
@@ -40,7 +40,7 @@ private:
 };
 
 #else
-#include "config_t.h"
+#include "Config_t.h"
 
 class ConfigurationClass {
 public:
