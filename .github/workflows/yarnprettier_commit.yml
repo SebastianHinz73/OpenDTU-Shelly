@@ -1,5 +1,7 @@
 name: Yarn Prettier
 
+on: manual
+
 permissions: {}
 
 jobs:
